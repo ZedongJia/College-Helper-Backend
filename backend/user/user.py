@@ -40,3 +40,6 @@ class User:
     
     def __str__(self):
         return json.dumps(self.info, ensure_ascii=False)
+
+    def hasUser(self):
+        return self.info != {}

@@ -26,7 +26,8 @@ def login(request):
             user = User(userInfo)
             # 设置cookier
             response = HttpResponse(str(user), content_type='application/json')
-            response.set_signed_cookie(**user.getCookie(), salt='?zrgj2023?', max_age=60 * 60)
+            if user.hasUser():
+                response.set_signed_cookie(**user.getCookie(), salt='?zrgj2023?', max_age=60 * 60)
             return response
         except Error as e:
             return HttpResponse(400, content_type='application/json')
