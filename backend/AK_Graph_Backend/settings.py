@@ -90,8 +90,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "ak_graph",
-        "USER": "j",
-        "PASSWORD": "j",
+        "USER": "雨霖铃",
+        "PASSWORD": "030714hH",
         "HOST": "localhost",
         "PORT": "3306"
     }
