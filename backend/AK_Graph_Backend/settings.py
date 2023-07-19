@@ -87,27 +87,6 @@ WSGI_APPLICATION = "AK_Graph_Backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-<<<<<<< HEAD
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "ak_graph",
-        "USER": "雨霖铃",
-        "PASSWORD": "030714hH",
-        "HOST": "localhost",
-        "PORT": "3306"
-    }
-}
-
-NEO_DB_POOL = {
-    'profile': 'http://localhost:7474',
-    'username': 'mydb',
-    'password': '******',
-    'size': 1
-}
-
-=======
->>>>>>> b4bc378868ecf169416048d4ec9565bbc69d66f9
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 

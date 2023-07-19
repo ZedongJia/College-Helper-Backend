@@ -3,43 +3,19 @@ import random
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse
 from django.db import connection, Error
-from user.user import User
-<<<<<<< HEAD
+from user.entities.user import User
 import datetime
-=======
 from utls.encrypt import encrypt
 from utls.valid import Validate
->>>>>>> b4bc378868ecf169416048d4ec9565bbc69d66f9
 
 # from neo4j_model.db_pool import DB_POOL
 # Create your views here.
 
-<<<<<<< HEAD
-# 转化为字典数组
-def toDictList(keys, List):
-    resultDictList = []
-    for i in range(len(List)):
-        info_dict = { keys[j]: List[i][j] if List[i][j] != None else '' for j in range(len(keys)) }
-        resultDictList.append(info_dict)
-    return resultDictList
-
-# 登录
-@require_http_methods(["GET"])
-def login(request):
-    account = request.GET.get('account', None)
-    password = request.GET.get('password', None)
-    password = User.encode(password)
-
-    if account == None or password == None:
-        return HttpResponse(400, content_type='application/json')
-
-=======
 @require_http_methods(["GET", "POST"])
 def account(request):
     r'''
     登录接口, 注册接口
     '''
->>>>>>> b4bc378868ecf169416048d4ec9565bbc69d66f9
     with connection.cursor() as cursor:
         try:
             if request.method == 'GET':
@@ -77,57 +53,6 @@ def account(request):
         except Error as e:
             return HttpResponse(400, content_type='application/json')
 
-<<<<<<< HEAD
-# 注册
-@require_http_methods(["POST"])
-def register(request):
-    account = request.POST.get('account', None)
-    password = request.POST.get('password', None)
-    # print(request.POST)
-    # params = json.loads(request.body)
-    # account = params['account']
-    # password = params['password']
-    password = User.encode(password)
-
-    if account == None or password == None:
-        return HttpResponse(400, content_type='application/json')
-    
-    with connection.cursor() as cursor:
-        try:
-            cursor.execute('insert into user values(null, %s, %s, %s, null, null, "unknown", null, null, null)', (account, account, password))
-        except Error as e:
-            return HttpResponse(400, content_type='application/json')
-        '''
-        ID bigint AI 
-        nick_name varchar(50) 
-        account varchar(50) PK 
-        password varchar(50) PK 
-        image mediumblob 
-        telephone varchar(20) 
-        gender varchar(2) 
-        email varchar(50) 
-        QQ varchar(20) 
-        weChat
-        '''
-        return HttpResponse(200, content_type='application/json')
-
-# 登出
-@require_http_methods(['GET'])
-def logout(request):
-    uuid = request.get_signed_cookie("uuid", default=None, salt="?zrgj2023?", max_age=None)
-    if uuid == None:
-        return HttpResponse(200, content_type='application/json')
-    response = HttpResponse(200, content_type='application/json')
-    response.delete_cookie(uuid)
-    return response
-
-# ...
-@require_http_methods(['GET'])
-def valid(request):
-    uuid = request.get_signed_cookie("uuid", default=None, salt="?zrgj2023?", max_age=None)
-    if uuid == None:
-        return HttpResponse(400, content_type='application/json')
-=======
 @require_http_methods(['GET'])
 def state(request):
     # 前端发送的true不是True
@@ -135,7 +60,6 @@ def state(request):
         response = HttpResponse(200, content_type='application/json')
         Validate.drop(request, response)
         return response
->>>>>>> b4bc378868ecf169416048d4ec9565bbc69d66f9
     else:
         # 验证是否有效
         valid = Validate.valid(request)
@@ -144,7 +68,7 @@ def state(request):
         else:
             return HttpResponse(400, content_type='application/json')
 
-# ...
+
 @require_http_methods(['GET'])
 def verify(request):
     length = 6
@@ -194,6 +118,9 @@ def PrivacyInfo(request):
                 privacyInfo = cursor.fetchall()
                 # 转化成字典数组
                 keys = ['user_ID', 'telephone_priv', 'gender_priv', 'email_priv', 'QQ_priv', 'weChat_priv']
+                '''
+                这里你去新建一个privacy类, 仿照user进行处理,文件夹在entities下
+                '''
                 privacy = toDictList(keys, privacyInfo)
                 return HttpResponse(json.dumps(privacy), content_type='application/json')
             except Error as e:
@@ -243,7 +170,9 @@ def BrowseInfo(request):
             try:
                 cursor.execute("select time, type, content from browsing_history where isHistory = 'true' and user_ID = %s order by time desc;" % account_id)
                 BrowseHistory = cursor.fetchall()
-                # 转化成字典数组
+                '''
+                这里也是
+                '''
                 keys = ['time', 'type', 'content']
                 browseInfo = toDictList(keys, BrowseHistory)
                 return HttpResponse(json.dumps(browseInfo, default=str), content_type='application/json')
@@ -278,6 +207,9 @@ def CollectedInfo(request):
                 CollectedInfo = cursor.fetchall()
                 # 转化成字典数组
                 keys = ['time', 'type', 'content']
+                '''
+                这里也是
+                '''
                 collectedInfo = toDictList(keys, CollectedInfo)
                 return HttpResponse(json.dumps(collectedInfo, default=str), content_type='application/json')
             except Error as e:
@@ -311,6 +243,9 @@ def getMessageList(request):
             messageList = cursor.fetchall()
             # 转化成字典数组
             keys = ['user_ID', 'time', 'message']
+            '''
+            这里也是
+            '''
             messagelist = toDictList(keys, messageList)
             return HttpResponse(json.dumps(messagelist, default=str), content_type='application/json')
         except:
