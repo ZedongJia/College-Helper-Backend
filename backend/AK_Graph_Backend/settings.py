@@ -30,20 +30,21 @@ ALLOWED_HOSTS = ['localhost']
 # Application definition
 
 INSTALLED_APPS = [
+    # "django.contrib.sessions",
+    "django.contrib.staticfiles",
     'corsheaders',
     "user.apps.UserConfig"
 ]
 # "django.contrib.admin",
 # "django.contrib.auth",
 # "django.contrib.contenttypes",
-# "django.contrib.sessions",
 # "django.contrib.messages",
-# "django.contrib.staticfiles",
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
-    # "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     # "django.middleware.csrf.CsrfViewMiddleware",
     # "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -86,24 +87,6 @@ WSGI_APPLICATION = "AK_Graph_Backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "ak_graph",
-        "USER": "j",
-        "PASSWORD": "j",
-        "HOST": "localhost",
-        "PORT": "3306"
-    }
-}
-
-NEO_DB_POOL = {
-    'profile': 'http://localhost:7474',
-    'username': 'mydb',
-    'password': '******',
-    'size': 1
-}
-
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
@@ -144,3 +127,9 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+try:
+    from .local_settings import *
+except ImportError:
+    pass

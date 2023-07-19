@@ -1,1 +1,6 @@
 __pycache__
+personalSetting.py
+.vscode
+*/migrations/*.py
+!*/migrations/__init__.py
+*.sqlite3
