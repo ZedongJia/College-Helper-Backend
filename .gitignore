@@ -1,5 +1,5 @@
 __pycache__
-personalSetting.py
+local_settings.py
 .vscode
 */migrations/*.py
 !*/migrations/__init__.py

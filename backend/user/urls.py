@@ -10,12 +10,15 @@ from . import views
 '''
 urlpatterns = [
     path('account/', views.account, name='account'),
+    path('quick/', views.quick, name='quick'),
+    path('code/', views.getcode, name='code'),
+    path('modifyPW/', views.updatePW, name='modifyPW'),
     path('state/', views.state, name='state'),
     path('verify/', views.verify, name='verify'),
-    path('userinfo/', views.UserInfo, name='userinfo'),
-    path('privacyinfo/', views.PrivacyInfo, name='privacyinfo'),
-    path('gettrueprivacy/', views.getTruePrivacy, name='gettrueprivacy'),
-    path('browseinfo/', views.BrowseInfo, name='browseinfo'),
-    path('collectedinfo/', views.CollectedInfo, name='collectedinfo'),
-    path('getmessagelist/', views.getMessageList, name='getmessagelist')
+    # path('userinfo/', views.UserInfo, name='userinfo'),
+    # path('privacyinfo/', views.PrivacyInfo, name='privacyinfo'),
+    # path('gettrueprivacy/', views.getTruePrivacy, name='gettrueprivacy'),
+    # path('browseinfo/', views.BrowseInfo, name='browseinfo'),
+    # path('collectedinfo/', views.CollectedInfo, name='collectedinfo'),
+    # path('getmessagelist/', views.getMessageList, name='getmessagelist')
 ]
