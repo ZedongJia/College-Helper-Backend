@@ -5,6 +5,7 @@ from django.db import connection
 from gallery.views import store_img
 from utls.encrypt import encrypt
 from utls.valid import Identity
+from datetime import datetime
 
 # from neo4j_model.db_pool import DB_POOL
 # Create your views here.
@@ -214,7 +215,9 @@ def privacyInfo(request):
         ID = request.POST.get("ID")
         values = [request.POST.get(k, "true") for k in keys]
         with connection.cursor() as cursor:
-            sql = "update privacy set " + "=%s, ".join(keys) + "=%s " + "where user_ID=%s"
+            sql = (
+                "update privacy set " + "=%s, ".join(keys) + "=%s " + "where user_ID=%s"
+            )
             cursor.execute(
                 sql,
                 tuple(values) + (ID,),
@@ -222,93 +225,128 @@ def privacyInfo(request):
             return JsonResponse({"status": True})
 
 
-# # 根据用户ID 返回对应private为true的信息字段
-# @require_http_methods(['GET'])
-# def getTruePrivacy(request):
-#     account_id = request.GET.get('id', None)
-#     if account_id == None:
-#         return HttpResponse(400, content_type='application/json')
-#     with connection.cursor() as cursor:
-#         try:
-#             cursor.execute('select * from privacy where user_ID = %s;' % account_id)
-#             privacyInfo = cursor.fetchall()[0]
-#             cursor.execute("select column_name from information_schema.columns where table_name = 'privacy'")
-#             keys = cursor.fetchall()
-#             key = []
-#             for i in range(len(privacyInfo)):
-#                 if(privacyInfo[i] == 'true'):
-#                     key.append(keys[i])
-#             return HttpResponse(json.dumps(key), content_type='application/json')
-#         except Error as e:
-#             return HttpResponse(400, content_type='application/json')
+# 根据用户ID 返回对应private为true的信息字段
+@require_http_methods(["GET"])
+def getOpenInfo(request):
+    ID = request.GET.get("ID", None)
+    keys = ["nickname", "image", "gender", "phone", "email", "QQ", "weChat"]
+    priv_keys = [
+        "telephone_priv",
+        "gender_priv",
+        "email_priv",
+        "QQ_priv",
+        "weChat_priv",
+        "collection_priv",
+    ]
+    resultDict = {}
+    with connection.cursor() as cursor:
+        # 查到基本信息
+        sql = "select " + ", ".join(keys) + " from user where ID = %s;"
+        cursor.execute(
+            sql,
+            (ID,),
+        )
+        userInfo = cursor.fetchone()
+        if userInfo is None:
+            return JsonResponse({"status": False, "error": "信息不存在"})
+        # 查找收藏记录
+        cursor.execute(
+            "select time, type, content from browsing_history where user_ID=%s and isCollected='true'",
+            (ID,),
+        )
+        collected = cursor.fetchall()
+        # 查找privacy
+        sql = "select " + ", ".join(priv_keys) + " from privacy where user_ID = %s;"
+        cursor.execute(sql, (ID,))
+        priv = cursor.fetchone()
+        # 添加信息
+        resultDict["nickname"] = userInfo[0]
+        resultDict["image"] = userInfo[1]
+        # 检验是否加入
+        resultDict["gender"] = userInfo[2] if priv[1] == "true" else "未公开"
+        resultDict["phone"] = userInfo[3] if priv[0] == "true" else "未公开"
+        resultDict["email"] = userInfo[4] if priv[2] == "true" else "未公开"
+        resultDict["QQ"] = userInfo[5] if priv[3] == "true" else "未公开"
+        resultDict["weChat"] = userInfo[6] if priv[4] == "true" else "未公开"
+        resultDict["collection"] = collected if priv[5] == "true" else "未公开"
 
-# # 根据用户ID 获取、删除历史记录
-# def BrowseInfo(request):
-#     # 获取历史记录
-#     if request.method == 'GET':
-#         account_id = request.GET.get('id', None)
-#         if account_id == None:
-#             return HttpResponse(400, content_type='application/json')
-#         with connection.cursor() as cursor:
-#             try:
-#                 cursor.execute("select time, type, content from browsing_history where isHistory = 'true' and user_ID = %s order by time desc;" % account_id)
-#                 BrowseHistory = cursor.fetchall()
-#                 '''
-#                 这里也是
-#                 '''
-#                 keys = ['time', 'type', 'content']
-#                 browseInfo = toDictList(keys, BrowseHistory)
-#                 return HttpResponse(json.dumps(browseInfo, default=str), content_type='application/json')
-#             except Error as e:
-#                 return HttpResponse(400, content_type='application/json')
-#     # 删除历史记录
-#     if request.method == 'POST':
-#         info = request.GET    #  time、type、user_ID
-#         if info == None:
-#             return HttpResponse(400, content_type='application/json')
-
-#         with connection.cursor() as cursor:
-#             try:
-#                 cursor.execute("update browsing_history set isHistory = 'false' where time = '%s' and type = '%s' and user_ID = %s;" % (info['time'], info['type'], info['user_ID']))
-#                 return HttpResponse(200, content_type='application/json')
-#             except:
-#                 return HttpResponse(400, content_type='application/json')
+        return JsonResponse({"status": True, "openDict": resultDict})
 
 
-# # 根据用户ID 获取、删除收藏记录
-# def CollectedInfo(request):
-#     # 获取收藏记录
-#     if request.method == 'GET':
-#         info = request.GET    #  user_ID
-#         print(info['user_ID'])
-#         if info == None:
-#             return HttpResponse(400, content_type='application/json')
+# 根据用户ID 获取、删除历史记录
+def getBrowseInfo(request):
+    # 获取历史记录
+    if request.method == "GET":
+        ID = request.GET.get("ID", None)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "select time, type, content from browsing_history where isHistory = 'true' and user_ID = %s order by time desc;",
+                (ID,),
+            )
+            browseInfo = {}
+            g_time_str = datetime(1600, 1, 1, 1, 1, 1).date().strftime('%Y年%m月%d日')
+            browseHistory = cursor.fetchall()
+            for row in browseHistory:
+                time, type, content = row
+                time_str = time.date().strftime('%Y年%m月%d日')
+                if time_str != g_time_str:
+                    g_time_str = time_str
+                    browseInfo[g_time_str] = []
+                time = time.time()
+                browseInfo[str(g_time_str)].append(
+                    {"time": time, "type": type, "content": content}
+                )
+            return JsonResponse({"status": True, "browseInfo": browseInfo})
+    # 删除历史记录
+    if request.method == "POST":
+        ID = request.POST.get("ID")
+        time = request.POST.get("time")
+        type = request.POST.get("type")
+        content = request.POST.get("content")
 
-#         with connection.cursor() as cursor:
-#             try:
-#                 cursor.execute("select time, type, content from browsing_history where isCollected = 'true' and user_ID = %s order by time desc;" % (info['user_ID']))
-#                 CollectedInfo = cursor.fetchall()
-#                 # 转化成字典数组
-#                 keys = ['time', 'type', 'content']
-#                 '''
-#                 这里也是
-#                 '''
-#                 collectedInfo = toDictList(keys, CollectedInfo)
-#                 return HttpResponse(json.dumps(collectedInfo, default=str), content_type='application/json')
-#             except Error as e:
-#                 return HttpResponse(400, content_type='application/json')
-#     # 删除收藏记录
-#     if request.method == 'POST':
-#         info = request.GET    #  time、type、user_ID
-#         if info == None:
-#             return HttpResponse(400, content_type='application/json')
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "update browsing_history set isHistory = 'false' where user_ID=%s and time = %s and type = %s and content = %s;",
+                (ID, datetime.strptime(time, '%Y年%m月%d日%H:%M:%S'), type, content),
+            )
+            return JsonResponse({"status": True})
 
-#         with connection.cursor() as cursor:
-#             try:
-#                 cursor.execute("update browsing_history set isCollected = 'false' where time = '%s' and type = '%s' and user_ID = %s;" % (info['time'], info['type'], info['user_ID']))
-#                 return HttpResponse(200, content_type='application/json')
-#             except:
-#                 return HttpResponse(400, content_type='application/json')
+
+# 根据用户ID 获取、删除收藏记录
+def getCollectionInfo(request):
+    # 获取收藏记录
+    if request.method == "GET":
+        ID = request.GET.get("ID", None)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "select time, type, content from browsing_history where isCollected = 'true' and user_ID = %s order by time desc;",
+                (ID,),
+            )
+            collectionHistory = cursor.fetchall()
+            collectionInfo = {}
+            curr_type = ""
+            for row in collectionHistory:
+                time, type, content = row
+                if type != curr_type:
+                    curr_type = type
+                    collectionInfo[curr_type] = []
+                collectionInfo[curr_type].append(
+                    {"time": time.strftime('%Y年%m月%d日 %H:%M:%S'), "type": type, "content": content}
+                )
+            return JsonResponse({"status": True, "collectionInfo": collectionInfo})
+    # 删除收藏记录
+    if request.method == "POST":
+        ID = request.POST.get("ID")
+        time = request.POST.get("time")
+        type = request.POST.get("type")
+        content = request.POST.get("content")
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "update browsing_history set isCollected = 'false' where user_ID=%s and time = %s and type = %s and content = %s;",
+                (ID, datetime.strptime(time, '%Y年%m月%d日 %H:%M:%S'), type, content),
+            )
+            return JsonResponse({"status": True})
 
 
 # # 根据ID1和ID2获取聊天记录

@@ -17,8 +17,8 @@ urlpatterns = [
     path('verify/', views.verify, name='verify'),
     path('userInfo/', views.userInfo, name='userInfo'),
     path('privacyInfo/', views.privacyInfo, name='privacyInfo'),
-    # path('gettrueprivacy/', views.getTruePrivacy, name='gettrueprivacy'),
-    # path('browseinfo/', views.BrowseInfo, name='browseinfo'),
-    # path('collectedinfo/', views.CollectedInfo, name='collectedinfo'),
+    path('getOpenInfo/', views.getOpenInfo, name='getOpenInfo'),
+    path('getBrowseInfo/', views.getBrowseInfo, name='getBrowseInfo'),
+    path('getCollectionInfo/', views.getCollectionInfo, name='getCollectionInfo'),
     # path('getmessagelist/', views.getMessageList, name='getmessagelist')
 ]
