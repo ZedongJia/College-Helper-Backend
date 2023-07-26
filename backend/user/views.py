@@ -2,6 +2,7 @@ import random
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse, JsonResponse
 from django.db import connection
+from gallery.views import store_img
 from utls.encrypt import encrypt
 from utls.valid import Identity
 
@@ -141,67 +142,85 @@ def verify(request):
     return HttpResponse("".join(verification), content_type="application/json")
 
 
-# # 根据用户ID 获取、修改用户信息
-# def UserInfo(request):
-#     if request.method == 'GET':
-#         account_id = request.GET.get('id', None)
-#         if account_id == None:
-#             return HttpResponse(400, content_type='application/json')
-#         with connection.cursor() as cursor:
-#             try:
-#                 cursor.execute('select * from user where ID = %s' % account_id)
-#                 userInfo = cursor.fetchall()
-#                 user = User(userInfo)
-#                 response = HttpResponse(str(user), content_type='application/json')
-#                 return response
-#             except Error as e:
-#                 return HttpResponse(400, content_type='application/json')
-#     if request.method == 'POST':
-#         new_info = request.POST.copy()
-#         if new_info == None:
-#             return HttpResponse(400, content_type='application/json')
-#         # new_info['password'] = User.encode(new_info['password'])
-#         with connection.cursor() as cursor:
-#             try:
-#                 for i in new_info:
-#                     if i != 'ID':
-#                         cursor.execute("update user set %s = '%s' where ID = %s;" % (i, new_info[i], new_info['ID']))
-#                 return HttpResponse(200, content_type='application/json')
-#             except:
-#                 return HttpResponse(400, content_type='application/json')
+# 根据用户ID 获取、修改用户信息
+@require_http_methods(["GET", "POST"])
+def userInfo(request):
+    if request.method == "GET":
+        ID = request.GET.get("ID", None)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "select nickname, gender, phone, email, QQ, weChat from user where ID = %s",
+                (ID,),
+            )
+            userInfo = cursor.fetchone()
+            if userInfo is None:
+                return JsonResponse({"status": False, "error": "该用户不存在"})
+            keys = ["nickname", "gender", "phone", "email", "QQ", "weChat"]
+            userInfo = {keys[i]: meta for i, meta in enumerate(userInfo)}
+            return JsonResponse({"status": True, "userInfo": userInfo})
 
-# # 根据用户ID 获取、修改privacy信息
-# def PrivacyInfo(request):
-#     if request.method == 'GET':
-#         account_id = request.GET.get('id', None)
-#         if account_id == None:
-#             return HttpResponse(400, content_type='application/json')
-#         with connection.cursor() as cursor:
-#             try:
-#                 cursor.execute('select * from privacy where user_ID = %s;' % account_id)
-#                 privacyInfo = cursor.fetchall()
-#                 # 转化成字典数组
-#                 keys = ['user_ID', 'telephone_priv', 'gender_priv', 'email_priv', 'QQ_priv', 'weChat_priv']
-#                 '''
-#                 这里你去新建一个privacy类, 仿照user进行处理,文件夹在entities下
-#                 '''
-#                 privacy = toDictList(keys, privacyInfo)
-#                 return HttpResponse(json.dumps(privacy), content_type='application/json')
-#             except Error as e:
-#                 return HttpResponse(400, content_type='application/json')
+    if request.method == "POST":
+        ID = request.POST.get("ID")
+        keys = ["nickname", "gender", "phone", "email", "QQ", "weChat"]
+        values = [
+            request.POST.get("nickname", ""),
+            request.POST.get("gender", ""),
+            request.POST.get("phone", ""),
+            request.POST.get("email", ""),
+            request.POST.get("QQ", ""),
+            request.POST.get("weChat", ""),
+        ]
+        image = request.FILES.get("imgUrl", None)
+        if image is not None:
+            imageUrl = store_img(ID, image.read())
+            keys.append("image")
+            values.append(imageUrl)
+        with connection.cursor() as cursor:
+            sql = "update user set " + "=%s, ".join(keys) + "=%s " + "where ID=%s"
+            cursor.execute(
+                sql,
+                tuple(values) + (ID,),
+            )
+            cursor.execute("select ID, nickname, image from user where ID=%s", (ID,))
+            userInfo = cursor.fetchone()
+            keys = ["ID", "nickname", "image"]
+            userInfo = {k: userInfo[i] for i, k in enumerate(keys)}
+            return JsonResponse({"status": True, "userInfo": userInfo})
 
-#     if request.method == 'POST':
-#         new_info = request.POST
-#         if new_info == None:
-#             return HttpResponse(400, content_type='application/json')
-#         with connection.cursor() as cursor:
-#             try:
-#                 for i in new_info:
-#                     if i != 'user_ID':
-#                         cursor.execute("update privacy set %s = '%s' where user_ID = %s;" % (i, new_info[i], new_info['user_ID']))
-#                 return HttpResponse(200, content_type='application/json')
-#             except:
-#                 return HttpResponse(400, content_type='application/json')
+
+# 根据用户ID 获取、修改privacy信息
+def privacyInfo(request):
+    keys = [
+        "telephone_priv",
+        "gender_priv",
+        "email_priv",
+        "QQ_priv",
+        "weChat_priv",
+        "collection_priv",
+    ]
+    if request.method == "GET":
+        ID = request.GET.get("ID", None)
+        with connection.cursor() as cursor:
+            sql = "select " + ", ".join(keys) + " from privacy where user_ID = %s;"
+            cursor.execute(sql, (ID,))
+            privacyInfo = cursor.fetchone()
+            if privacyInfo is None:
+                return JsonResponse({"status": False, "error": "没有信息"})
+            # 转化成字典数组
+            privacyInfo = {k: privacyInfo[i] for i, k in enumerate(keys)}
+            return JsonResponse({"status": True, "privacyInfo": privacyInfo})
+
+    if request.method == "POST":
+        ID = request.POST.get("ID")
+        values = [request.POST.get(k, "true") for k in keys]
+        with connection.cursor() as cursor:
+            sql = "update privacy set " + "=%s, ".join(keys) + "=%s " + "where user_ID=%s"
+            cursor.execute(
+                sql,
+                tuple(values) + (ID,),
+            )
+            return JsonResponse({"status": True})
+
 
 # # 根据用户ID 返回对应private为true的信息字段
 # @require_http_methods(['GET'])

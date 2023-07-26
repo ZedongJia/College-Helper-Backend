@@ -3,7 +3,7 @@ from utls.encrypt import encrypt
 
 class Identity:
     SALT = "?$zrgj2023$?"
-    EXISTING_DURATION = 60 * 10
+    EXISTING_DURATION = 60 * 60
 
     def __init__(self, ID, account, request, response):
         self.account = account

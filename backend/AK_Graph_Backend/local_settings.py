@@ -3,7 +3,7 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "HOST": 'localhost',
-        "NAME": 'akgraph',
+        "NAME": 'ak_graph',
         "USER": 'j',
         "PASSWORD": 'j',
         "PORT": 3306
