@@ -30,5 +30,12 @@ def match(request):
 
 def store_img(user_ID, b_img):
     with connection.cursor() as cursor:
-        cursor.execute("insert into gallery values(%s, %b)", (user_ID, b_img))
+        # 查找是否存在照片
+        cursor.execute("select * from gallery where user_ID=%s", (user_ID,))
+        user_img = cursor.fetchone()
+        if user_img is not None:
+            cursor.execute("update gallery set %b where user_ID=%s", (b_img, user_ID))
+        else:
+            # 没有就进行插入
+            cursor.execute("insert into gallery values(%s, %b)", (user_ID, b_img))
     return BASE_URL + "/gallery/match/?ID=" + str(user_ID)

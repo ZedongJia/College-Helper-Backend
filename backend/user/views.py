@@ -134,15 +134,6 @@ def state(request):
             return HttpResponse(400, content_type="application/json")
 
 
-@require_http_methods(["GET"])
-def verify(request):
-    length = 6
-    verification = []
-    for _ in range(length):
-        verification.append(str(random.randint(0, 9)))
-    return HttpResponse("".join(verification), content_type="application/json")
-
-
 # 根据用户ID 获取、修改用户信息
 @require_http_methods(["GET", "POST"])
 def userInfo(request):
@@ -255,6 +246,23 @@ def getOpenInfo(request):
             (ID,),
         )
         collected = cursor.fetchall()
+        if len(collected) != 0:
+            collectionDict = {}
+            curr_type = ""
+            for row in collected:
+                time, type, content = row
+                if type != curr_type:
+                    curr_type = type
+                    collectionDict[curr_type] = []
+                collectionDict[curr_type].append(
+                    {
+                        "time": time.strftime("%Y年%m月%d日 %H:%M:%S"),
+                        "type": type,
+                        "content": content,
+                    }
+                )
+        else:
+            collectionDict = {}
         # 查找privacy
         sql = "select " + ", ".join(priv_keys) + " from privacy where user_ID = %s;"
         cursor.execute(sql, (ID,))
@@ -268,7 +276,7 @@ def getOpenInfo(request):
         resultDict["email"] = userInfo[4] if priv[2] == "true" else "未公开"
         resultDict["QQ"] = userInfo[5] if priv[3] == "true" else "未公开"
         resultDict["weChat"] = userInfo[6] if priv[4] == "true" else "未公开"
-        resultDict["collection"] = collected if priv[5] == "true" else "未公开"
+        resultDict["collectionDict"] = collectionDict if priv[5] == "true" else "未公开"
 
         return JsonResponse({"status": True, "openDict": resultDict})
 
@@ -284,11 +292,11 @@ def getBrowseInfo(request):
                 (ID,),
             )
             browseInfo = {}
-            g_time_str = datetime(1600, 1, 1, 1, 1, 1).date().strftime('%Y年%m月%d日')
+            g_time_str = datetime(1600, 1, 1, 1, 1, 1).date().strftime("%Y年%m月%d日")
             browseHistory = cursor.fetchall()
             for row in browseHistory:
                 time, type, content = row
-                time_str = time.date().strftime('%Y年%m月%d日')
+                time_str = time.date().strftime("%Y年%m月%d日")
                 if time_str != g_time_str:
                     g_time_str = time_str
                     browseInfo[g_time_str] = []
@@ -307,7 +315,7 @@ def getBrowseInfo(request):
         with connection.cursor() as cursor:
             cursor.execute(
                 "update browsing_history set isHistory = 'false' where user_ID=%s and time = %s and type = %s and content = %s;",
-                (ID, datetime.strptime(time, '%Y年%m月%d日%H:%M:%S'), type, content),
+                (ID, datetime.strptime(time, "%Y年%m月%d日%H:%M:%S"), type, content),
             )
             return JsonResponse({"status": True})
 
@@ -331,7 +339,11 @@ def getCollectionInfo(request):
                     curr_type = type
                     collectionInfo[curr_type] = []
                 collectionInfo[curr_type].append(
-                    {"time": time.strftime('%Y年%m月%d日 %H:%M:%S'), "type": type, "content": content}
+                    {
+                        "time": time.strftime("%Y年%m月%d日 %H:%M:%S"),
+                        "type": type,
+                        "content": content,
+                    }
                 )
             return JsonResponse({"status": True, "collectionInfo": collectionInfo})
     # 删除收藏记录
@@ -344,7 +356,7 @@ def getCollectionInfo(request):
         with connection.cursor() as cursor:
             cursor.execute(
                 "update browsing_history set isCollected = 'false' where user_ID=%s and time = %s and type = %s and content = %s;",
-                (ID, datetime.strptime(time, '%Y年%m月%d日 %H:%M:%S'), type, content),
+                (ID, datetime.strptime(time, "%Y年%m月%d日 %H:%M:%S"), type, content),
             )
             return JsonResponse({"status": True})
 

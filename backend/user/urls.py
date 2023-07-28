@@ -14,7 +14,6 @@ urlpatterns = [
     path('code/', views.getcode, name='code'),
     path('modifyPW/', views.updatePW, name='modifyPW'),
     path('state/', views.state, name='state'),
-    path('verify/', views.verify, name='verify'),
     path('userInfo/', views.userInfo, name='userInfo'),
     path('privacyInfo/', views.privacyInfo, name='privacyInfo'),
     path('getOpenInfo/', views.getOpenInfo, name='getOpenInfo'),

@@ -74,7 +74,7 @@ class Identity:
 
     @staticmethod
     def valid_code(request, code):
-        store_code = request.session.get('code', None)
+        store_code = request.session.get("code", None)
         if store_code is None or str(store_code) != str(code):
             return False
         return True
