@@ -33,7 +33,8 @@ INSTALLED_APPS = [
     # "django.contrib.sessions",
     "django.contrib.staticfiles",
     'corsheaders',
-    "user.apps.UserConfig"
+    "user.apps.UserConfig",
+    "entity.apps.EntityConfig"
 ]
 # "django.contrib.admin",
 # "django.contrib.auth",
