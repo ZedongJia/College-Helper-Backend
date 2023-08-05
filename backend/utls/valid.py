@@ -7,6 +7,7 @@ class Identity:
 
     def __init__(self, ID, account, request, response):
         self.account = account
+        self.id = ID
         self.uuid = encrypt(ID)
         self.request = request
         self.response = response
@@ -22,6 +23,7 @@ class Identity:
         self._set_cookie()
 
     def _set_session(self):
+        self.request.session["id"] = self.id
         self.request.session["uuid"] = self.uuid
         self.request.session["account"] = self.account
         self.request.session.set_expiry(self.EXISTING_DURATION)
