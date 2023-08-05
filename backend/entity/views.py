@@ -1,7 +1,7 @@
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse, JsonResponse
 
-from backend.neo4j_model.db_pool import NEO4j_POOL
+from neo4j_model.db_pool import NEO4j_POOL
 
 
 
