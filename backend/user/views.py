@@ -58,7 +58,7 @@ def account(request):
         phone = request.POST.get("phone", None)
         password = request.POST.get("password", None)
         code = request.POST.get("code", None)
-        image = BASE_URL + "/gallery/match/?ID=-1"
+        image = BASE_URL + "/gallery/match?ID=-1"
 
         if not Identity.valid_code(request, code):
             return JsonResponse({"status": False, "error": "验证码错误"})
