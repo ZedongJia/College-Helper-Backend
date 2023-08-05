@@ -1,8 +1,7 @@
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse
 from django.db import connection, Error
-
-BASE_URL = "http://localhost:8000"
+from AK_Graph_Backend.settings import BASE_URL
 
 
 # Create your views here.

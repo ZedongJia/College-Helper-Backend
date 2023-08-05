@@ -6,6 +6,7 @@ from gallery.views import store_img
 from utls.encrypt import encrypt
 from utls.valid import Identity
 from datetime import datetime
+from AK_Graph_Backend.settings import BASE_URL
 
 # from neo4j_model.db_pool import DB_POOL
 # Create your views here.
@@ -26,17 +27,17 @@ def account(request):
         with connection.cursor() as cursor:
             if use == "phone":
                 cursor.execute(
-                    "select ID, nickname, image from user where phone=%s and password=%s",
+                    "select id, nickname, image from user where phone=%s and password=%s",
                     (account, password),
                 )
             else:
                 cursor.execute(
-                    "select ID, nickname, image from user where email=%s and password=%s",
+                    "select id, nickname, image from user where email=%s and password=%s",
                     (account, password),
                 )
             userInfo = cursor.fetchone()
 
-        keys = ["ID", "nickname", "image"]
+        keys = ["id", "nickname", "image"]
         if userInfo is None:
             # 查无此人
             return JsonResponse({"status": False, "error": "账号或密码错误"})
@@ -46,7 +47,7 @@ def account(request):
         # 设置cookie 和 session
         response = JsonResponse({"status": True, "userInfo": userInfo})
         identity = Identity(
-            str(userInfo["ID"]), userInfo["nickname"], request, response
+            str(userInfo["id"]), userInfo["nickname"], request, response
         )
         identity.sign()
         return response
@@ -57,23 +58,26 @@ def account(request):
         phone = request.POST.get("phone", None)
         password = request.POST.get("password", None)
         code = request.POST.get("code", None)
+        image = BASE_URL + "/gallery/match/?ID=-1"
 
         if not Identity.valid_code(request, code):
             return JsonResponse({"status": False, "error": "验证码错误"})
 
         password = encrypt(password)
-        # 查找该人是否已存在, 利用phone
+        # 查找该人是否已存在, 利用phone, email
         with connection.cursor() as cursor:
-            cursor.execute("select ID from user where phone=%s", (phone,))
+            cursor.execute(
+                "select id from user where phone=%s or email=%s", (phone, email)
+            )
             if not cursor.fetchone() is None:
-                return JsonResponse({"status": False, "error": "该手机号已注册"})
+                return JsonResponse({"status": False, "error": "该用户已注册，请更改手机号或邮箱"})
         # 插入
         with connection.cursor() as cursor:
             cursor.execute(
                 "insert into user "
-                "(ID, nickname, password, image, phone, gender, email, QQ, weChat)"
-                'values (null, %s, %s, null, %s, "unknown", %s, null, null)',
-                (nickname, password, phone, email),
+                "(id, nickname, password, image, phone, gender, email, QQ, weChat)"
+                'values (null, %s, %s, %s, %s, "unknown", %s, null, null)',
+                (nickname, password, image, phone, email),
             )
         return JsonResponse({"status": True, "info": "注册成功"})
 
@@ -83,29 +87,31 @@ def quick(request):
     phone = request.GET.get("phone", None)
     code = request.GET.get("code", None)
     with connection.cursor() as cursor:
-        cursor.execute("select ID, nickname, image from user where phone=%s", (phone,))
+        cursor.execute("select id, nickname, image from user where phone=%s", (phone,))
         userInfo = cursor.fetchone()
     if userInfo is None:
         return JsonResponse({"status": False, "error": "手机号错误"})
     if not Identity.valid_code(request, code):
         return JsonResponse({"status": False, "error": "验证码错误"})
-    keys = ["ID", "nickname", "image"]
+    keys = ["id", "nickname", "image"]
 
     userInfo = {keys[i]: meta for i, meta in enumerate(userInfo)}
 
     response = JsonResponse({"status": True, "userInfo": userInfo})
-    identity = Identity(str(userInfo["ID"]), userInfo["nickname"], request, response)
+    identity = Identity(str(userInfo["id"]), userInfo["nickname"], request, response)
     identity.sign()
     return response
 
 
 @require_http_methods(["POST"])
 def updatePW(request):
-    ID = request.POST.get("ID")
+    ID = request.session.get("id", None)
+    if ID is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
     password = request.POST.get("password")
     password = encrypt(password)
     with connection.cursor() as cursor:
-        cursor.execute("update user set password=%s where ID=%s", (password, ID))
+        cursor.execute("update user set password=%s where id=%s", (password, ID))
 
     return JsonResponse({"status": True, "info": "修改成功"})
 
@@ -138,10 +144,12 @@ def state(request):
 @require_http_methods(["GET", "POST"])
 def userInfo(request):
     if request.method == "GET":
-        ID = request.GET.get("ID", None)
+        ID = request.session.get("id", None)
+        if ID is None:
+            return JsonResponse({"status": False, "error": "信息错误请重新登录"})
         with connection.cursor() as cursor:
             cursor.execute(
-                "select nickname, gender, phone, email, QQ, weChat from user where ID = %s",
+                "select nickname, gender, phone, email, QQ, weChat from user where id = %s",
                 (ID,),
             )
             userInfo = cursor.fetchone()
@@ -152,7 +160,9 @@ def userInfo(request):
             return JsonResponse({"status": True, "userInfo": userInfo})
 
     if request.method == "POST":
-        ID = request.POST.get("ID")
+        ID = request.session.get("id", None)
+        if ID is None:
+            return JsonResponse({"status": False, "error": "信息错误请重新登录"})
         keys = ["nickname", "gender", "phone", "email", "QQ", "weChat"]
         values = [
             request.POST.get("nickname", ""),
@@ -173,9 +183,9 @@ def userInfo(request):
                 sql,
                 tuple(values) + (ID,),
             )
-            cursor.execute("select ID, nickname, image from user where ID=%s", (ID,))
+            cursor.execute("select id, nickname, image from user where id=%s", (ID,))
             userInfo = cursor.fetchone()
-            keys = ["ID", "nickname", "image"]
+            keys = ["id", "nickname", "image"]
             userInfo = {k: userInfo[i] for i, k in enumerate(keys)}
             return JsonResponse({"status": True, "userInfo": userInfo})
 
@@ -191,9 +201,11 @@ def privacyInfo(request):
         "collection_priv",
     ]
     if request.method == "GET":
-        ID = request.GET.get("ID", None)
+        ID = request.session.get("id", None)
+        if ID is None:
+            return JsonResponse({"status": False, "error": "信息错误请重新登录"})
         with connection.cursor() as cursor:
-            sql = "select " + ", ".join(keys) + " from privacy where user_ID = %s;"
+            sql = "select " + ", ".join(keys) + " from privacy where user_id = %s;"
             cursor.execute(sql, (ID,))
             privacyInfo = cursor.fetchone()
             if privacyInfo is None:
@@ -203,11 +215,13 @@ def privacyInfo(request):
             return JsonResponse({"status": True, "privacyInfo": privacyInfo})
 
     if request.method == "POST":
-        ID = request.POST.get("ID")
+        ID = request.session.get("id", None)
+        if ID is None:
+            return JsonResponse({"status": False, "error": "信息错误请重新登录"})
         values = [request.POST.get(k, "true") for k in keys]
         with connection.cursor() as cursor:
             sql = (
-                "update privacy set " + "=%s, ".join(keys) + "=%s " + "where user_ID=%s"
+                "update privacy set " + "=%s, ".join(keys) + "=%s " + "where user_id=%s"
             )
             cursor.execute(
                 sql,
@@ -216,7 +230,7 @@ def privacyInfo(request):
             return JsonResponse({"status": True})
 
 
-# 根据用户ID 返回对应private为true的信息字段
+# 根据不同用户ID 返回对应private为true的信息字段
 @require_http_methods(["GET"])
 def getOpenInfo(request):
     ID = request.GET.get("ID", None)
@@ -232,7 +246,7 @@ def getOpenInfo(request):
     resultDict = {}
     with connection.cursor() as cursor:
         # 查到基本信息
-        sql = "select " + ", ".join(keys) + " from user where ID = %s;"
+        sql = "select " + ", ".join(keys) + " from user where id = %s;"
         cursor.execute(
             sql,
             (ID,),
@@ -242,7 +256,7 @@ def getOpenInfo(request):
             return JsonResponse({"status": False, "error": "信息不存在"})
         # 查找收藏记录
         cursor.execute(
-            "select time, type, content from browsing_history where user_ID=%s and isCollected='true'",
+            "select time, type, content from browsing_history where user_id=%s and isCollected='true'",
             (ID,),
         )
         collected = cursor.fetchall()
@@ -264,7 +278,7 @@ def getOpenInfo(request):
         else:
             collectionDict = {}
         # 查找privacy
-        sql = "select " + ", ".join(priv_keys) + " from privacy where user_ID = %s;"
+        sql = "select " + ", ".join(priv_keys) + " from privacy where user_id = %s;"
         cursor.execute(sql, (ID,))
         priv = cursor.fetchone()
         # 添加信息
@@ -285,37 +299,41 @@ def getOpenInfo(request):
 def getBrowseInfo(request):
     # 获取历史记录
     if request.method == "GET":
-        ID = request.GET.get("ID", None)
+        ID = request.session.get("id", None)
+        if ID is None:
+            return JsonResponse({"status": False, "error": "信息错误请重新登录"})
         with connection.cursor() as cursor:
             cursor.execute(
-                "select time, type, content from browsing_history where isHistory = 'true' and user_ID = %s order by time desc;",
+                "select time, type, content from browsing_history where isHistory = 'true' and user_id = %s order by time desc;",
                 (ID,),
             )
             browseInfo = {}
             g_time_str = datetime(1600, 1, 1, 1, 1, 1).date().strftime("%Y年%m月%d日")
             browseHistory = cursor.fetchall()
             for row in browseHistory:
-                time, type, content = row
-                time_str = time.date().strftime("%Y年%m月%d日")
+                b_time, type, content = row
+                time_str = b_time.date().strftime("%Y年%m月%d日")
                 if time_str != g_time_str:
                     g_time_str = time_str
                     browseInfo[g_time_str] = []
-                time = time.time()
+                b_time = b_time.time()
                 browseInfo[str(g_time_str)].append(
-                    {"time": time, "type": type, "content": content}
+                    {"time": b_time, "type": type, "content": content}
                 )
             return JsonResponse({"status": True, "browseInfo": browseInfo})
     # 删除历史记录
     if request.method == "POST":
-        ID = request.POST.get("ID")
-        time = request.POST.get("time")
+        ID = request.session.get("id", None)
+        if ID is None:
+            return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+        b_time = request.POST.get("time")
         type = request.POST.get("type")
         content = request.POST.get("content")
 
         with connection.cursor() as cursor:
             cursor.execute(
-                "update browsing_history set isHistory = 'false' where user_ID=%s and time = %s and type = %s and content = %s;",
-                (ID, datetime.strptime(time, "%Y年%m月%d日%H:%M:%S"), type, content),
+                "update browsing_history set isHistory = 'false' where user_id=%s and time = %s and type = %s and content = %s;",
+                (ID, datetime.strptime(b_time, "%Y年%m月%d日%H:%M:%S"), type, content),
             )
             return JsonResponse({"status": True})
 
@@ -324,23 +342,25 @@ def getBrowseInfo(request):
 def getCollectionInfo(request):
     # 获取收藏记录
     if request.method == "GET":
-        ID = request.GET.get("ID", None)
+        ID = request.session.get("id", None)
+        if ID is None:
+            return JsonResponse({"status": False, "error": "信息错误请重新登录"})
         with connection.cursor() as cursor:
             cursor.execute(
-                "select time, type, content from browsing_history where isCollected = 'true' and user_ID = %s order by time desc;",
+                "select time, type, content from browsing_history where isCollected = 'true' and user_id = %s order by time desc;",
                 (ID,),
             )
             collectionHistory = cursor.fetchall()
             collectionInfo = {}
             curr_type = ""
             for row in collectionHistory:
-                time, type, content = row
+                c_time, type, content = row
                 if type != curr_type:
                     curr_type = type
                     collectionInfo[curr_type] = []
                 collectionInfo[curr_type].append(
                     {
-                        "time": time.strftime("%Y年%m月%d日 %H:%M:%S"),
+                        "time": c_time.strftime("%Y年%m月%d日 %H:%M:%S"),
                         "type": type,
                         "content": content,
                     }
@@ -348,38 +368,147 @@ def getCollectionInfo(request):
             return JsonResponse({"status": True, "collectionInfo": collectionInfo})
     # 删除收藏记录
     if request.method == "POST":
-        ID = request.POST.get("ID")
-        time = request.POST.get("time")
+        id = request.session.get("id", None)
+        if id is None:
+            return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+        c_time = request.POST.get("time")
         type = request.POST.get("type")
         content = request.POST.get("content")
 
         with connection.cursor() as cursor:
             cursor.execute(
-                "update browsing_history set isCollected = 'false' where user_ID=%s and time = %s and type = %s and content = %s;",
-                (ID, datetime.strptime(time, "%Y年%m月%d日 %H:%M:%S"), type, content),
+                "update browsing_history set isCollected = 'false' where user_id=%s and time = %s and type = %s and content = %s;",
+                (ID, datetime.strptime(c_time, "%Y年%m月%d日 %H:%M:%S"), type, content),
             )
             return JsonResponse({"status": True})
 
 
-# # 根据ID1和ID2获取聊天记录
-# @require_http_methods(['GET'])
-# def getMessageList(request):
-#     ID_info = request.GET    # user1_ID  user2_ID
-#     if ID_info == None:
-#         return HttpResponse(400, content_type='application/json')
+# 根据id获取聊天session和对象
+@require_http_methods(["GET"])
+def getSession(request):
+    ID = request.session.get("id", None)
+    if ID is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
 
-#     with connection.cursor() as cursor:
-#         try:
-#             cursor.execute('select ID from dialogue where user1_ID = %s and user2_ID = %s' % (ID_info['user1_ID'], ID_info['user2_ID']))
-#             dialogue_ID = cursor.fetchall()
-#             cursor.execute('select user_ID, time, message from message_history where dialogue_ID = %s and (user_ID = %s or user_ID = %s) order by time asc;' % (dialogue_ID[0][0], ID_info['user1_ID'], ID_info['user2_ID']))
-#             messageList = cursor.fetchall()
-#             # 转化成字典数组
-#             keys = ['user_ID', 'time', 'message']
-#             '''
-#             这里也是
-#             '''
-#             messagelist = toDictList(keys, messageList)
-#             return HttpResponse(json.dumps(messagelist, default=str), content_type='application/json')
-#         except:
-#             return HttpResponse(400, content_type='application/json')
+    with connection.cursor() as cursor:
+        # 查询该id下的所有对话
+        cursor.execute("select id from session where user_id=%s", (ID,))
+        session_id_list = cursor.fetchall()
+        # 查询该id下的所有follow对象
+        cursor.execute("select follow_id from follow where user_id=%s", (ID,))
+        follow_id_list = [id[0] for id in cursor.fetchall()]
+        sessionInfo = {"临时会话": [], "好友": []}
+        # 查询会话下的所有信息
+        for session_id in session_id_list:
+            session_id = session_id[0]
+            # 默认是二人对话
+            cursor.execute(
+                "select user_id from session where id=%s and user_id<>%s",
+                (session_id, ID),
+            )
+            id = cursor.fetchone()
+            if id is None:
+                continue
+            id = id[0]
+            # 获取该用户该session的最后一条记录的时间
+            cursor.execute(
+                "select time from message where session_id=%s and user_id=%s order by time desc",
+                (session_id, id),
+            )
+            s_time = cursor.fetchone()
+            if s_time is None:
+                s_time = "--:--:--"
+            else:
+                s_time = s_time[0].strftime("%H:%M:%S")
+            # 查询用户信息
+            cursor.execute("select nickname, image from user where id=%s", (id,))
+            info = cursor.fetchone()
+            info = {"id": id, "img": info[1], "content": info[0]}
+            if id in follow_id_list:
+                sessionInfo["好友"].append(
+                    {"time": s_time, "info": info, "session_id": session_id}
+                )
+            else:
+                sessionInfo["临时会话"].append(
+                    {"time": s_time, "info": info, "session_id": session_id}
+                )
+
+        return JsonResponse({"status": True, "sessionInfo": sessionInfo})
+
+
+# 根据session获取聊天记录
+@require_http_methods(["GET"])
+def getMessageList(request):
+    m_time = request.GET.get("time")
+    endTime = m_time
+    session_id = request.GET.get("session_id")
+    if session_id is None:
+        return JsonResponse({"status": False, "error": "会话不存在"})
+
+    with connection.cursor() as cursor:
+        if m_time == "--":
+            cursor.execute(
+                "select user_id, time, content from message where session_id=%s",
+                (session_id),
+            )
+        else:
+            cursor.execute(
+                "select user_id, time, content from message where session_id=%s and time > %s",
+                (session_id, m_time),
+            )
+        messageResult = cursor.fetchall()
+        messageList = []
+        for i, message in enumerate(messageResult):
+            messageList.append(
+                {"ID": message[0], "time": message[1], "content": message[2]}
+            )
+            if i == 0:
+                endTime = message[1]
+            elif message[1] > endTime:
+                endTime = message[1]
+    return JsonResponse(
+        {"status": True, "data": {"endTime": endTime, "messageList": messageList}}
+    )
+
+
+@require_http_methods(["POST"])
+def addMessage(request):
+    session_id = request.POST.get("session_id")
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    m_time = request.POST.get("time")
+    print(m_time)
+    m_time = datetime.fromtimestamp(int(m_time) / 1000)
+    content = request.POST.get("content")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "insert into message values(%s, %s, %s, %s)",
+            (session_id, id, m_time, content),
+        )
+        return JsonResponse({"status": True})
+
+
+r"""
+日期：入：timestamp
+     出：datetime
+
+"""
+
+
+@require_http_methods(["POST"])
+def dropSession(request):
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    session_id = request.POST.get("session_id")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "delete from session where user_id=%s and id=%s", (id, session_id)
+        )
+        return JsonResponse({"status": True})
+
+
+# @require_http_methods(["GET"])
+# def follow(request):
+#     id = request.
