@@ -412,8 +412,8 @@ def getSession(request):
             id = id[0]
             # 获取该用户该session的最后一条记录的时间
             cursor.execute(
-                "select time from message where session_id=%s and user_id=%s order by time desc",
-                (session_id, id),
+                "select time from message where session_id=%s order by time desc",
+                (session_id,),
             )
             s_time = cursor.fetchone()
             if s_time is None:
