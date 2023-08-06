@@ -11,7 +11,8 @@ DATABASES = {
         "NAME": '你的数据库',
         "USER": '你的用户名',
         "PASSWORD": '你的密码',
-        "PORT": 你的端口号
+        "PORT": 你的端口号,
+        "OPTIONS": {"charset": "utf8mb4"},
     }
 }
 
@@ -43,4 +44,6 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 
 SESSION_COOKIE_AGE = 60 * 10
+
+BASE_URL = "http://localhost:8000"
 ```

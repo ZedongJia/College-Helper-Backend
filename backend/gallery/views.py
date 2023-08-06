@@ -1,8 +1,7 @@
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse
 from django.db import connection, Error
-
-BASE_URL = "http://localhost:8000"
+from AK_Graph_Backend.settings import BASE_URL
 
 
 # Create your views here.
@@ -13,7 +12,7 @@ def match(request):
     useDefault = False
     with connection.cursor() as cursor:
         try:
-            cursor.execute("select image from gallery where user_ID=%s", (ID,))
+            cursor.execute("select image from gallery where user_id=%s", (ID,))
             ret = cursor.fetchone()
             if ret is None:
                 useDefault = True
@@ -31,11 +30,11 @@ def match(request):
 def store_img(user_ID, b_img):
     with connection.cursor() as cursor:
         # 查找是否存在照片
-        cursor.execute("select * from gallery where user_ID=%s", (user_ID,))
+        cursor.execute("select * from gallery where user_id=%s", (user_ID,))
         user_img = cursor.fetchone()
         if user_img is not None:
-            cursor.execute("update gallery set %b where user_ID=%s", (b_img, user_ID))
+            cursor.execute("update gallery set image=%b where user_id=%s", (b_img, user_ID))
         else:
             # 没有就进行插入
             cursor.execute("insert into gallery values(%s, %b)", (user_ID, b_img))
-    return BASE_URL + "/gallery/match/?ID=" + str(user_ID)
+    return BASE_URL + "/gallery/match?ID=" + str(user_ID)

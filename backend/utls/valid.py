@@ -1,12 +1,13 @@
 from utls.encrypt import encrypt
-
+import urllib.parse
 
 class Identity:
     SALT = "?$zrgj2023$?"
     EXISTING_DURATION = 60 * 60
 
     def __init__(self, ID, account, request, response):
-        self.account = account
+        self.account = urllib.parse.quote(account)
+        self.id = ID
         self.uuid = encrypt(ID)
         self.request = request
         self.response = response
@@ -22,6 +23,7 @@ class Identity:
         self._set_cookie()
 
     def _set_session(self):
+        self.request.session["id"] = self.id
         self.request.session["uuid"] = self.uuid
         self.request.session["account"] = self.account
         self.request.session.set_expiry(self.EXISTING_DURATION)

@@ -16,4 +16,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "AK_Graph_Backend.settings")
 # load DB Pool
 from neo4j_model.db_load import *
 
+# load jieba
+from models.model_load import *
+
 application = get_wsgi_application()

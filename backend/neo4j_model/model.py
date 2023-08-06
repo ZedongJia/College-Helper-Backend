@@ -15,5 +15,3 @@ class Neo4jConnector:
 
         return self.graph.run(cypher, params)
 
-    def getGraph(self):
-        return self.graph
