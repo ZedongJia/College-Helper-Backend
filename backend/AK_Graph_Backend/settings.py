@@ -15,7 +15,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+DEFAULT_CHARSET = "utf8"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -25,16 +25,15 @@ SECRET_KEY = "django-insecure-6+u6)k2+=z_9m89+o-78f8=1)&2wc&6!lppm$8i(b9^%@(&he9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost']
+ALLOWED_HOSTS = ["localhost"]
 
 # Application definition
-
 INSTALLED_APPS = [
     # "django.contrib.sessions",
     "django.contrib.staticfiles",
-    'corsheaders',
+    "corsheaders",
     "user.apps.UserConfig",
-    "entity.apps.EntityConfig"
+    "entity.apps.EntityConfig",
 ]
 # "django.contrib.admin",
 # "django.contrib.auth",
@@ -43,7 +42,7 @@ INSTALLED_APPS = [
 
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -56,12 +55,12 @@ MIDDLEWARE = [
 CORS_ORIGIN_ALLOW_ALL = True  # 允许所有域名跨域或者下面的白名单设置
 CORS_ORIGIN_REGEX_WHITELIST = [
     # 设置可跨域白名单的IP地址
-   "http://localhost:8080"
+    "http://localhost:8080"
 ]
 
-CORS_ALLOW_METHODS=("*") # 配置允许的请求方式
-CORS_ALLOW_HEADERS = ("*") # 配置允许的请求头
-CORS_ALLOW_CREDENTIALS = True #允许携带cookie
+CORS_ALLOW_METHODS = "*"  # 配置允许的请求方式
+CORS_ALLOW_HEADERS = "*"  # 配置允许的请求头
+CORS_ALLOW_CREDENTIALS = True  # 允许携带cookie
 
 
 ROOT_URLCONF = "AK_Graph_Backend.urls"
