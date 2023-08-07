@@ -21,6 +21,7 @@ def cut_sentence(request):
     cut_result = Recognize.recognize(sentence)
     return JsonResponse({"status": True, "cut_result": cut_result})
 
+
 @require_http_methods(["GET"])
 def queryEntity(request):
     name = request.GET.get("name", None)
@@ -36,7 +37,7 @@ def queryEntity(request):
             )
             data = cursor.data()[0]["a"]
             cursor = conn.run(
-                cypher="match (a)-[:BELONG_TO]->(s)-[:BELONG_TO]->(m)<-[:HAS]-(b:%s) where b.name=$name and a.fk_university_id=b.id return a, b.name, s.name, m.name"
+                cypher="match (a:major)-[:BELONG_TO]->(s:sub_branch)-[:BELONG_TO]->(m:main_branch)<-[:HAS]-(b:%s) where b.name=$name and a.fk_university_id=b.id return a, b.name, s.name, m.name"
                 % label,
                 params={"name": name},
             )
@@ -48,13 +49,15 @@ def queryEntity(request):
             link = []
             recommend = {}
             for i, r in enumerate(result):
-                name = r["m.name"] + "(" + r["b.name"] + ")"
-                if name not in major_get:
-                    rel.append({"name": name, "symbolSize": 30, "c": 0})
-                    link.append({"source": name, "label": "属于", "target": r["b.name"]})
-                    major_get.append(name)
+                m_name = r["m.name"]
+                if m_name not in major_get:
+                    rel.append({"name": m_name, "symbolSize": 60, "c": 0})
+                    link.append(
+                        {"source": m_name, "label": "属于", "target": r["b.name"]}
+                    )
+                    major_get.append(m_name)
                 if r["b.name"] not in main_get:
-                    rel.append({"name": r["b.name"], "symbolSize": 30, "c": 1})
+                    rel.append({"name": r["b.name"], "symbolSize": 60, "c": 1})
                     main_get.append(r["b.name"])
             major_get = []
             for r in result:
@@ -71,11 +74,12 @@ def queryEntity(request):
                     )
                     major_get.append(main_name + r["a"]["name"])
             cursor = conn.run(
-                cypher="match (a:living_condition)<-[:HAS]-(b:%s) where b.name=$name return a"
+                cypher="match (a:living_condition)-[:BELONG_TO]->(b:%s) where b.name=$name return a"
                 % label,
                 params={"name": name},
             )
             living_condition = cursor.data()
+            living_condition = [c["a"] for c in living_condition]
             data = {
                 "name": data["name"],
                 "establishTime": data["establishTime"],
@@ -90,7 +94,7 @@ def queryEntity(request):
                 "related": rel,
                 "link": link,
                 "recommend": recommend,
-                "living_condition": living_condition
+                "living_condition": living_condition,
             }
         finally:
             NEO4j_POOL.free(conn)
@@ -105,7 +109,7 @@ def queryEntity(request):
             )
             data = cursor.data()[0]
             cursor = conn.run(
-                cypher="match (a:%s)-[:BELONG_TO]->(s)-[:BELONG_TO]->(m)<-[:HAS]-(b:university) where a.name contains($name) and a.fk_university_id=b.id return a, b.name, s.name, m.name limit 100"
+                cypher="match (a:%s)-[:BELONG_TO]->(s:sub_branch)-[:BELONG_TO]->(m:main_branch)<-[:HAS]-(b:university) where a.name contains($name) and a.fk_university_id=b.id return a, b.name, s.name, m.name limit 300"
                 % label,
                 params={"name": name},
             )
@@ -122,11 +126,11 @@ def queryEntity(request):
                     break
                 name = r["a"]["name"] + "(" + r["b.name"] + ")"
                 if name not in major_get:
-                    rel.append({"name": name, "symbolSize": 30, "c": 0})
+                    rel.append({"name": name, "symbolSize": 60, "c": 0})
                     link.append({"source": name, "label": "属于", "target": r["b.name"]})
                     major_get.append(name)
                 if r["b.name"] not in uni_get:
-                    rel.append({"name": r["b.name"], "symbolSize": 30, "c": 1})
+                    rel.append({"name": r["b.name"], "symbolSize": 60, "c": 1})
                     uni_get.append(r["b.name"])
                 else:
                     limit += 1
@@ -208,17 +212,18 @@ def queryEntity(request):
             NEO4j_POOL.free(conn)
         return JsonResponse({"status": True, "data": data})
 
+
 @require_http_methods(["GET"])
 def RelationQuery(request):
     # 共有三种类型  大学、专业、省份、城市
-    entity1 = request.GET.get('entity1', None)
-    option = request.GET.get('option', None)
-    entity2 = request.GET.get('entity2', None)
+    entity1 = request.GET.get("entity1", None)
+    option = request.GET.get("option", None)
+    entity2 = request.GET.get("entity2", None)
     data = []
     link = []
     # 至少一个实体
     if len(entity1) == 0 and len(entity2) == 0:
-        return JsonResponse('请先输入一个实体！')
+        return JsonResponse("请先输入一个实体！")
     # 情况1：只有1个实体
     elif len(entity1) == 0 or len(entity2) == 0:
         entity = entity1 if len(entity2) == 0 else entity2
@@ -236,8 +241,11 @@ def RelationQuery(request):
         # 选择关系
         else:
             data, link = neo4j.oneOptionAndtTwoEntityQuery(entity1, option, entity2)
-    
-    return JsonResponse(json.dumps({ 'data': data, 'link': link }), safe=False)
+        d_ = {"data": data, "link": link}
+        return JsonResponse(json.dumps(d_), safe=False)
+
+    return JsonResponse(json.dumps({"data": data, "link": link}), safe=False)
+
 
 @require_http_methods(["GET"])
 def IntelligentQuery(request):
@@ -258,37 +266,42 @@ def IntelligentQuery(request):
 # r"""
 # 点击省份时
 # 先获取该省份的所有年份信息返回，
-# 再默认获取第一个年份对应的 category 与 degree, 
+# 再默认获取第一个年份对应的 category 与 degree,
 # 再默认获取第一个 category 与 degree 对应的一分一段
 # """
+
 
 # 参数：provinceName
 @require_http_methods(["GET"])
 def getProYearsInfo(request):
-    province_name = request.GET.get('provinceName', None)
+    province_name = request.GET.get("provinceName", None)
     province = neo4j.province_list
     # 获取年份信息
     years, province = neo4j.yearsInfo(province_name)
-    return JsonResponse(json.dumps({ 'years': years, 'province': province }), safe=False)
+    return JsonResponse(json.dumps({"years": years, "province": province}), safe=False)
+
 
 # 参数：provinceName， year
 @require_http_methods(["GET"])
 def getCateDegreeInfo(request):
-    province_name = request.GET.get('provinceName', None)
-    year = request.GET.get('year', None)
+    province_name = request.GET.get("provinceName", None)
+    year = request.GET.get("year", None)
     # 获取 category 与 degree 信息
     category, degree = neo4j.cateDegreeInfo(province_name, year)
-    return JsonResponse(json.dumps({ 'category': category, 'degree': degree }), safe=False)
+    return JsonResponse(
+        json.dumps({"category": category, "degree": degree}), safe=False
+    )
+
 
 # 参数：provinceName, year, category, (degree)
 @require_http_methods(["GET"])
 def getScoreInfo(request):
-    province_name = request.GET.get('provinceName', None)
-    year = request.GET.get('year', None)
-    category = request.GET.get('category', None)
-    degree = request.GET.get('degree', None)
+    province_name = request.GET.get("provinceName", None)
+    year = request.GET.get("year", None)
+    category = request.GET.get("category", None)
+    degree = request.GET.get("degree", None)
     # 获取 detail 信息
     detail = neo4j.scoreInfo(province_name, year, category, degree)
     for i in detail:
-        print(i['rank'])
-    return JsonResponse(json.dumps({ 'detail': detail }), safe=False)
+        print(i["rank"])
+    return JsonResponse(json.dumps({"detail": detail}), safe=False)
