@@ -240,3 +240,14 @@ def RelationQuery(request):
             data, link = neo4j.oneOptionAndtTwoEntityQuery(entity1, option, entity2)
         d_ = { 'data': data, 'link': link }
         return JsonResponse(json.dumps(d_), safe=False)
+    
+@require_http_methods(["GET"])
+def IntelligentQuery(request):
+    entity = request.GET.get("entity", None)
+    if entity is None:
+        return JsonResponse({ "error": "输入错误请重试"})
+    entityGroup=Recognize.recognize(entity)
+    for key in entityGroup['cut_dict']:
+        data, link = neo4j.onlyOneEntityQuery(entityGroup['cut_dict'][key]['name'])
+    d_ = { 'data': data, 'link': link }
+    return JsonResponse(json.dumps(d_), safe=False)
