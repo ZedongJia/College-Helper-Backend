@@ -18,6 +18,7 @@ urlpatterns = [
     path("privacyInfo", views.privacyInfo, name="privacyInfo"),
     path("getOpenInfo", views.getOpenInfo, name="getOpenInfo"),
     path("getBrowseInfo", views.getBrowseInfo, name="getBrowseInfo"),
+    path("addBrowseInfo", views.addBrowseInfo, name="addBrowseInfo"),
     path("getCollectionInfo", views.getCollectionInfo, name="getCollectionInfo"),
     path("getSession", views.getSession, name="getSession"),
     path("getMessageList", views.getMessageList, name="getMessageList"),

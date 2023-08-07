@@ -5,5 +5,8 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("relation/", views.RelationQuery, name="RelationQuery"),
     path("query", views.queryEntity, name="entityQuery"),
-    path("cut", views.cut_sentence, name='cut_sentence')
+    path("cut", views.cut_sentence, name='cut_sentence'),
+    path("getProYearsInfo/", views.getProYearsInfo, name="getProYearsInfo"),
+    path("getCateDegreeInfo/", views.getCateDegreeInfo, name="getCateDegreeInfo"),
+    path("getScoreInfo/", views.getScoreInfo, name="getScoreInfo")
 ]

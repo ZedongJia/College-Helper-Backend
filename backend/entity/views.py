@@ -146,8 +146,6 @@ def RelationQuery(request):
         # 选择关系
         else:
             data, link = neo4j.oneOptionAndOneEntityQuery(entity, option)
-        d_ = { 'data': data, 'link': link }
-        return JsonResponse(json.dumps(d_), safe=False)
     # 情况2：2个实体
     else:
         # 未选择关系
@@ -156,5 +154,47 @@ def RelationQuery(request):
         # 选择关系
         else:
             data, link = neo4j.oneOptionAndtTwoEntityQuery(entity1, option, entity2)
-        d_ = { 'data': data, 'link': link }
-        return JsonResponse(json.dumps(d_), safe=False)
+    
+    return JsonResponse(json.dumps({ 'data': data, 'link': link }), safe=False)
+
+# 获取某一省的全部信息
+# 必选参数：province_name
+# 返回值：allCondition[ {所有省份}, {所选省份的所有年份}, { {所选省份的对应年份--所有专业类别、所有学生类别} } ]
+
+# r"""
+# 点击省份时
+# 先获取该省份的所有年份信息返回，
+# 再默认获取第一个年份对应的 category 与 degree, 
+# 再默认获取第一个 category 与 degree 对应的一分一段
+# """
+
+# 参数：provinceName
+@require_http_methods(["GET"])
+def getProYearsInfo(request):
+    province_name = request.GET.get('provinceName', None)
+    province = neo4j.province_list
+    # 获取年份信息
+    years, province = neo4j.yearsInfo(province_name)
+    return JsonResponse(json.dumps({ 'years': years, 'province': province }), safe=False)
+
+# 参数：provinceName， year
+@require_http_methods(["GET"])
+def getCateDegreeInfo(request):
+    province_name = request.GET.get('provinceName', None)
+    year = request.GET.get('year', None)
+    # 获取 category 与 degree 信息
+    category, degree = neo4j.cateDegreeInfo(province_name, year)
+    return JsonResponse(json.dumps({ 'category': category, 'degree': degree }), safe=False)
+
+# 参数：provinceName, year, category, (degree)
+@require_http_methods(["GET"])
+def getScoreInfo(request):
+    province_name = request.GET.get('provinceName', None)
+    year = request.GET.get('year', None)
+    category = request.GET.get('category', None)
+    degree = request.GET.get('degree', None)
+    # 获取 detail 信息
+    detail = neo4j.scoreInfo(province_name, year, category, degree)
+    for i in detail:
+        print(i['rank'])
+    return JsonResponse(json.dumps({ 'detail': detail }), safe=False)
