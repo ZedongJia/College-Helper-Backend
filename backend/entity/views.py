@@ -36,7 +36,7 @@ def queryEntity(request):
             )
             data = cursor.data()[0]["a"]
             cursor = conn.run(
-                cypher="match (a)-[:BELONG_TO]->(s)-[:BELONG_TO]->(m)<-[:HAS]-(b:%s) where b.name=$name and a.fk_university_id=b.id return a, b.name, s.name, m.name"
+                cypher="match (a:major)-[:BELONG_TO]->(s:sub_branch)-[:BELONG_TO]->(m:main_branch)<-[:HAS]-(b:%s) where b.name=$name and a.fk_university_id=b.id return a, b.name, s.name, m.name"
                 % label,
                 params={"name": name},
             )
@@ -48,13 +48,15 @@ def queryEntity(request):
             link = []
             recommend = {}
             for i, r in enumerate(result):
-                name = r["m.name"] + "(" + r["b.name"] + ")"
-                if name not in major_get:
-                    rel.append({"name": name, "symbolSize": 30, "c": 0})
-                    link.append({"source": name, "label": "属于", "target": r["b.name"]})
-                    major_get.append(name)
+                m_name = r["m.name"]
+                if m_name not in major_get:
+                    rel.append({"name": m_name, "symbolSize": 60, "c": 0})
+                    link.append(
+                        {"source": m_name, "label": "属于", "target": r["b.name"]}
+                    )
+                    major_get.append(m_name)
                 if r["b.name"] not in main_get:
-                    rel.append({"name": r["b.name"], "symbolSize": 30, "c": 1})
+                    rel.append({"name": r["b.name"], "symbolSize": 60, "c": 1})
                     main_get.append(r["b.name"])
             major_get = []
             for r in result:
@@ -71,11 +73,12 @@ def queryEntity(request):
                     )
                     major_get.append(main_name + r["a"]["name"])
             cursor = conn.run(
-                cypher="match (a:living_condition)<-[:HAS]-(b:%s) where b.name=$name return a"
+                cypher="match (a:living_condition)-[:BELONG_TO]->(b:%s) where b.name=$name return a"
                 % label,
                 params={"name": name},
             )
             living_condition = cursor.data()
+            living_condition = [c["a"] for c in living_condition]
             data = {
                 "name": data["name"],
                 "establishTime": data["establishTime"],
@@ -90,7 +93,7 @@ def queryEntity(request):
                 "related": rel,
                 "link": link,
                 "recommend": recommend,
-                "living_condition": living_condition
+                "living_condition": living_condition,
             }
         finally:
             NEO4j_POOL.free(conn)
@@ -105,7 +108,7 @@ def queryEntity(request):
             )
             data = cursor.data()[0]
             cursor = conn.run(
-                cypher="match (a:%s)-[:BELONG_TO]->(s)-[:BELONG_TO]->(m)<-[:HAS]-(b:university) where a.name contains($name) and a.fk_university_id=b.id return a, b.name, s.name, m.name limit 100"
+                cypher="match (a:%s)-[:BELONG_TO]->(s:sub_branch)-[:BELONG_TO]->(m:main_branch)<-[:HAS]-(b:university) where a.name contains($name) and a.fk_university_id=b.id return a, b.name, s.name, m.name limit 300"
                 % label,
                 params={"name": name},
             )
@@ -122,11 +125,11 @@ def queryEntity(request):
                     break
                 name = r["a"]["name"] + "(" + r["b.name"] + ")"
                 if name not in major_get:
-                    rel.append({"name": name, "symbolSize": 30, "c": 0})
+                    rel.append({"name": name, "symbolSize": 60, "c": 0})
                     link.append({"source": name, "label": "属于", "target": r["b.name"]})
                     major_get.append(name)
                 if r["b.name"] not in uni_get:
-                    rel.append({"name": r["b.name"], "symbolSize": 30, "c": 1})
+                    rel.append({"name": r["b.name"], "symbolSize": 60, "c": 1})
                     uni_get.append(r["b.name"])
                 else:
                     limit += 1
@@ -208,17 +211,18 @@ def queryEntity(request):
             NEO4j_POOL.free(conn)
         return JsonResponse({"status": True, "data": data})
 
+
 @require_http_methods(["GET"])
 def RelationQuery(request):
     # 共有三种类型  大学、专业、省份、城市
-    entity1 = request.GET.get('entity1', None)
-    option = request.GET.get('option', None)
-    entity2 = request.GET.get('entity2', None)
+    entity1 = request.GET.get("entity1", None)
+    option = request.GET.get("option", None)
+    entity2 = request.GET.get("entity2", None)
     data = []
     link = []
     # 至少一个实体
     if len(entity1) == 0 and len(entity2) == 0:
-        return JsonResponse('请先输入一个实体！')
+        return JsonResponse("请先输入一个实体！")
     # 情况1：只有1个实体
     elif len(entity1) == 0 or len(entity2) == 0:
         entity = entity1 if len(entity2) == 0 else entity2
@@ -228,7 +232,7 @@ def RelationQuery(request):
         # 选择关系
         else:
             data, link = neo4j.oneOptionAndOneEntityQuery(entity, option)
-        d_ = { 'data': data, 'link': link }
+        d_ = {"data": data, "link": link}
         return JsonResponse(json.dumps(d_), safe=False)
     # 情况2：2个实体
     else:
@@ -238,5 +242,5 @@ def RelationQuery(request):
         # 选择关系
         else:
             data, link = neo4j.oneOptionAndtTwoEntityQuery(entity1, option, entity2)
-        d_ = { 'data': data, 'link': link }
+        d_ = {"data": data, "link": link}
         return JsonResponse(json.dumps(d_), safe=False)

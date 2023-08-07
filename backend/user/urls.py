@@ -23,4 +23,13 @@ urlpatterns = [
     path("getMessageList", views.getMessageList, name="getMessageList"),
     path("addMessage", views.addMessage, name="addMessage"),
     path("dropSession", views.dropSession, name="dropSession"),
+    path("getReview", views.getReview, name="getReview"),
+    path("addReview", views.addReview, name="addReview"),
+    path("removeReview", views.removeReview, name="removeReview"),
+    path("queryFollow", views.queryFollow, name="queryFollow"),
+    path("querySession", views.querySession, name="querySession"),
+    path("queryFeedback", views.queryFeedback, name="queryFeedback"),
+    path("follow", views.follow, name="follow"),
+    path("addSession", views.addSession, name="addSession"),
+    path("addFeedback", views.addFeedback, name="addFeedback"),
 ]

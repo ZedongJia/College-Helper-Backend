@@ -509,6 +509,215 @@ def dropSession(request):
         return JsonResponse({"status": True})
 
 
-# @require_http_methods(["GET"])
-# def follow(request):
-#     id = request.
+# 新增------
+
+
+@require_http_methods(["GET"])
+def queryFollow(request):
+    id = request.session.get("id", None)
+    query_id = request.GET.get("query_id")
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    with connection.cursor() as cursor:
+        cursor.execute("select follow_id from follow where user_id=%s", (id,))
+        follow_id_list = cursor.fetchall()
+        follow_id_list = [str(id[0]) for id in follow_id_list]
+    if str(query_id) in follow_id_list:
+        return JsonResponse({"status": True, "msg": "exist"})
+    else:
+        return JsonResponse({"status": True, "msg": "not exist"})
+
+
+@require_http_methods(["GET"])
+def querySession(request):
+    id = request.session.get("id", None)
+    query_id = request.GET.get("query_id")
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "select T.id from session as S, session as T where S.id=T.id and S.user_id=%s",
+            (id,),
+        )
+        session_id_list = cursor.fetchall()
+        session_id_list = [str(id[0]) for id in session_id_list]
+
+    if str(query_id) in session_id_list:
+        return JsonResponse({"status": True, "msg": "exist"})
+    else:
+        return JsonResponse({"status": True, "msg": "not exist"})
+
+
+@require_http_methods(["POST"])
+def follow(request):
+    # add follow and session
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    follow_id = request.POST.get("follow_id")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "select follow_id from follow where user_id=%s and follow_id=%s",
+            (id, follow_id),
+        )
+        if cursor.fetchone() is not None:
+            return JsonResponse({"status": False, "error": "请勿重复关注同一个人"})
+        cursor.execute("insert into follow values(%s, %s)", (id, follow_id))
+        cursor.execute(
+            "select * from session as S, session as T where S.id=T.id and S.user_id=%s and T.user_id=%s",
+            (id, follow_id),
+        )
+        if cursor.fetchone() is None:
+            cursor.execute("select id from session order by id desc")
+            cnt = cursor.fetchone()
+            if cnt is None:
+                cursor.execute("insert into session values(1, %s)", (id))
+                cursor.execute("insert into session values(1, %s)", (follow_id))
+            else:
+                cursor.execute("insert into session values(%s, %s)", (cnt[0], id))
+                cursor.execute(
+                    "insert into session values(%s, %s)", (cnt[0], follow_id)
+                )
+
+    return JsonResponse({"status": True})
+
+
+@require_http_methods(["POST"])
+def addSession(request):
+    # if already exists, ignore
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    follow_id = request.POST.get("follow_id")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "select * from session as S, session as T where S.id=T.id and S.user_id=%s and T.user_id=%s",
+            (id, follow_id),
+        )
+        if cursor.fetchone() is None:
+            cursor.execute("select id from session order by id desc")
+            cnt = cursor.fetchone()
+            if cnt is None:
+                cursor.execute("insert into session values(1, %s)", (id))
+                cursor.execute("insert into session values(1, %s)", (follow_id))
+            else:
+                cursor.execute("insert into session values(%s, %s)", (cnt[0], id))
+                cursor.execute(
+                    "insert into session values(%s, %s)", (cnt[0], follow_id)
+                )
+            return JsonResponse({"status": True})
+        else:
+            return JsonResponse({"status": False, "error": "该会话已存在"})
+
+
+@require_http_methods(["GET"])
+def queryFeedback(request):
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    with connection.cursor() as cursor:
+        cursor.execute("select id, type, time, state, question, advice from feedback where user_id=%s", (id,))
+        ret = cursor.fetchall()
+        feedbackDict = {}
+        _typeDict = {
+            'entity': '实体',
+            'relation': '关系',
+            'addNew': '新增'
+        }
+        for f in ret:
+            _type = f[1]
+            if feedbackDict.get(_type, None) is None:
+                feedbackDict[_typeDict[_type]] = []
+            feedbackDict[_typeDict[_type]].append(
+                {"time": str(f[2]).replace('T', ' '), "id": f[0], "state": f[3], "question": f[4], "advice": f[5]}
+            )
+        return JsonResponse({"status": True, "feedbackDict": feedbackDict})
+
+
+@require_http_methods(["POST"])
+def addFeedback(request):
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    _type = request.POST.get("type")
+    question = request.POST.get("question")
+    advice = request.POST.get("advice")
+    image = request.FILES.get("imgSrc", None)
+    if image is None:
+        image = b''
+    else:
+        image = image.read()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "insert into feedback values(null, %s, %s, %s, %s, %s, %b, '待处理')",
+            (id, datetime.now(), _type, question, advice, image),
+        )
+        return JsonResponse({"status": True})
+
+
+"""
+                    time: '2017 5:04 01:01:01',
+                    id: 1,
+                    nickname: 'zhngsan',
+                    image: '',
+                    content: 'hhhh'
+"""
+
+
+@require_http_methods(["GET"])
+def getReview(request):
+    name = request.GET.get("name")
+    label = request.GET.get("label")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "select id, user_id, time, content from review where name=%s and label=%s order by time desc",
+            (name, label),
+        )
+        ret = cursor.fetchall()
+        reviewList = []
+        for r in ret:
+            review_id, user_id, time, content = r
+            cursor.execute("select nickname, image from user where id=%s", (user_id,))
+            nickname, image = cursor.fetchone()
+            reviewList.append(
+                {
+                    "review_id": review_id,
+                    "time": time,
+                    "id": user_id,
+                    "nickname": nickname,
+                    "image": image,
+                    "content": content,
+                }
+            )
+        return JsonResponse({"status": True, "reviewList": reviewList})
+
+
+@require_http_methods(["POST"])
+def addReview(request):
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    name = request.POST.get("name")
+    label = request.POST.get("label")
+    content = request.POST.get("content")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "insert into review values(null, %s, %s, %s, %s, %s)",
+            (id, name, label, datetime.now(), content),
+        )
+
+    return JsonResponse({"status": True})
+
+@require_http_methods(["POST"])
+def removeReview(request):
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    review_id = request.POST.get("review_id")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "delete from review where id=%s",
+            (review_id,),
+        )
+
+    return JsonResponse({"status": True})
