@@ -1,7 +1,7 @@
 import json
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse, JsonResponse
-
+import random
 from neo4j_model.db_pool import NEO4j_POOL
 from py2neo import Graph
 import json
@@ -35,6 +35,47 @@ def queryEntity(request):
                 params={"name": name},
             )
             data = cursor.data()[0]["a"]
+            cursor = conn.run(
+                cypher="match (a)-[:BELONG_TO]->(s)-[:BELONG_TO]->(m)<-[:HAS]-(b:%s) where b.name=$name and a.fk_university_id=b.id return a, b.name, s.name, m.name"
+                % label,
+                params={"name": name},
+            )
+            result = cursor.data()
+            # process rel
+            rel = []
+            main_get = []
+            major_get = []
+            link = []
+            recommend = {}
+            for i, r in enumerate(result):
+                name = r["m.name"] + "(" + r["b.name"] + ")"
+                if name not in major_get:
+                    rel.append({"name": name, "symbolSize": 30, "c": 0})
+                    link.append({"source": name, "label": "属于", "target": r["b.name"]})
+                    major_get.append(name)
+                if r["b.name"] not in main_get:
+                    rel.append({"name": r["b.name"], "symbolSize": 30, "c": 1})
+                    main_get.append(r["b.name"])
+            major_get = []
+            for r in result:
+                main_name = r["m.name"]
+                if recommend.get(main_name, None) is None:
+                    recommend[main_name] = []
+                if main_name + r["a"]["name"] not in major_get:
+                    recommend[main_name].append(
+                        {
+                            "main_branch": r["m.name"],
+                            "sub_branch": r["s.name"],
+                            "name": r["a"]["name"],
+                        }
+                    )
+                    major_get.append(main_name + r["a"]["name"])
+            cursor = conn.run(
+                cypher="match (a:living_condition)<-[:HAS]-(b:%s) where b.name=$name return a"
+                % label,
+                params={"name": name},
+            )
+            living_condition = cursor.data()
             data = {
                 "name": data["name"],
                 "establishTime": data["establishTime"],
@@ -46,6 +87,10 @@ def queryEntity(request):
                 "intro": json.loads(data["intro"]),
                 "rankInfo": json.loads(data["rankInfo"]),
                 "educationInfo": json.loads(data["educationInfo"]),
+                "related": rel,
+                "link": link,
+                "recommend": recommend,
+                "living_condition": living_condition
             }
         finally:
             NEO4j_POOL.free(conn)
@@ -54,24 +99,61 @@ def queryEntity(request):
         conn = NEO4j_POOL.getConnect()
         try:
             cursor = conn.run(
-                cypher="match (a: %s) where a.name=$name return a" % label,
-                params={"name": name},
-            )
-            data = cursor.data()[0]["a"]
-            cursor = conn.run(
-                cypher=
-                "match (a: %s)<-[r:HAS]-(b:university) where a.name=$name return r, b limit 5"
+                cypher="match (a: %s)-[:BELONG_TO]->(s:sub_branch)-[:BELONG_TO]->(m:main_branch) where a.name=$name return a, s.name, m.name"
                 % label,
                 params={"name": name},
             )
-            rel = cursor.data()
+            data = cursor.data()[0]
+            cursor = conn.run(
+                cypher="match (a:%s)-[:BELONG_TO]->(s)-[:BELONG_TO]->(m)<-[:HAS]-(b:university) where a.name contains($name) and a.fk_university_id=b.id return a, b.name, s.name, m.name limit 100"
+                % label,
+                params={"name": name},
+            )
+            result = random.choices(cursor.data(), k=30)
+            # process rel
+            limit = 5
+            rel = []
+            uni_get = []
+            major_get = []
+            link = []
+            recommend = {}
+            for i, r in enumerate(result):
+                if i >= limit:
+                    break
+                name = r["a"]["name"] + "(" + r["b.name"] + ")"
+                if name not in major_get:
+                    rel.append({"name": name, "symbolSize": 30, "c": 0})
+                    link.append({"source": name, "label": "属于", "target": r["b.name"]})
+                    major_get.append(name)
+                if r["b.name"] not in uni_get:
+                    rel.append({"name": r["b.name"], "symbolSize": 30, "c": 1})
+                    uni_get.append(r["b.name"])
+                else:
+                    limit += 1
+            major_get = []
+            for r in result:
+                uni_name = r["b.name"]
+                if recommend.get(uni_name, None) is None:
+                    recommend[uni_name] = []
+                if uni_name + r["a"]["name"] not in major_get:
+                    recommend[uni_name].append(
+                        {
+                            "main_branch": r["m.name"],
+                            "sub_branch": r["s.name"],
+                            "name": r["a"]["name"],
+                        }
+                    )
+                    major_get.append(uni_name + r["a"]["name"])
+            # process recommend
             data = {
-                "name": data["name"],
-                "mainBranch": data["mainBranch"],
-                "subBranch": data["subBranch"],
-                "duration": data["duration"],
-                "careerInfo": data["careerInfo"],
-                "relation": rel,
+                "name": data["a"]["name"],
+                "mainBranch": data["m.name"],
+                "subBranch": data["s.name"],
+                "duration": data["a"]["duration"],
+                "careerInfo": data["a"]["careerInfo"],
+                "related": rel,
+                "link": link,
+                "recommend": recommend,
             }
         finally:
             NEO4j_POOL.free(conn)
@@ -84,6 +166,9 @@ def queryEntity(request):
                 params={"name": name},
             )
             result = cursor.data()[0]["a"]
+            result["infoDict"] = (
+                result["infoDict"] if result["infoDict"] is not None else "{}"
+            )
             data = {
                 "name": result["name"],
                 "tag": result["tag"],
@@ -93,30 +178,27 @@ def queryEntity(request):
             if label == "person":
                 data["identity"] = result["identity"]
                 cursor = conn.run(
-                    cypher=
-                    "match (a: %s)-[:BELONG_TO]->(b:university) where a.name=$name return b"
+                    cypher="match (a: %s)-[]->(b:university) where a.name=$name return b"
                     % label,
                     params={"name": name},
                 )
                 university = cursor.data()[0]["b"]
                 cursor = conn.run(
-                    cypher=
-                    "match (a: %s)-[:BELONG_TO]->(b:university) where b.name=$name return a.name, a.identity limit 5"
+                    cypher="match (a: %s)-[]->(b:university) where b.name=$name return a.name, a.identity limit 5"
                     % label,
                     params={"name": university["name"]},
                 )
                 related = cursor.data()
-                related = [{
-                    "name": person["a.name"],
-                    "identity": person["a.identity"]
-                } for person in related]
+                related = [
+                    {"name": person["a.name"], "identity": person["a.identity"]}
+                    for person in related
+                ]
                 data["university"] = university
                 data["related"] = related
             else:
                 cursor = conn.run(
-                    cypher=
-                    "match (a: %s) where a.name<>$name return a.name limit 5" %
-                    label,
+                    cypher="match (a: %s) where a.name<>$name return a.name limit 5"
+                    % label,
                     params={"name": name},
                 )
                 related = cursor.data()

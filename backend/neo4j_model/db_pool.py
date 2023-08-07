@@ -44,6 +44,8 @@ class NEO4j_POOL:
         r"""
         free Neo4jConnector source
         """
+        if connector is None:
+            return
         if NEO4j_POOL.State[connector.id] == NEO4j_POOL.BUSY:
             NEO4j_POOL.State[connector.id] = NEO4j_POOL.FREE
             NEO4j_POOL.Free_Stack.append(connector.id)
