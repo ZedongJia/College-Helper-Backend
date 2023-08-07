@@ -508,6 +508,25 @@ def dropSession(request):
         )
         return JsonResponse({"status": True})
 
+@require_http_methods(["POST"])
+def addBrowseInfo(request):
+    # user_id
+    ID = request.session.get("id", None)
+    if ID is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    # time  当前时间
+    time = datetime.now()
+    # 类型
+    type = request.POST.get("type", None)
+    # 内容
+    content = request.POST.get("content", None)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "insert into browsing_history values(%s, %s, %s, %s, 'false', 'true')",
+            (str(ID), time, type, content),
+        )
+    
+    return JsonResponse({"status": True})
 
 # @require_http_methods(["GET"])
 # def follow(request):
