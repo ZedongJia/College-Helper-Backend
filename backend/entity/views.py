@@ -239,6 +239,18 @@ def RelationQuery(request):
     
     return JsonResponse(json.dumps({ 'data': data, 'link': link }), safe=False)
 
+@require_http_methods(["GET"])
+def IntelligentQuery(request):
+    # entity = request.GET.get("entity", None)
+    # if entity is None:
+    #     return JsonResponse({ "error": "输入错误请重试"})
+    # entityGroup=Recognize.recognize(entity)
+    # for key in entityGroup['cut_dict']:
+    #     data, link = neo4j.onlyOneEntityQuery(entityGroup['cut_dict'][key]['name'])
+    # d_ = { 'data': data, 'link': link }
+    # return JsonResponse(json.dumps(d_), safe=False)
+    return HttpResponse(200)
+
 # 获取某一省的全部信息
 # 必选参数：province_name
 # 返回值：allCondition[ {所有省份}, {所选省份的所有年份}, { {所选省份的对应年份--所有专业类别、所有学生类别} } ]
