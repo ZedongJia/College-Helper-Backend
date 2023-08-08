@@ -33,15 +33,15 @@ def entityType(temp):
 
 
 # 只有实体之一，无关系:
-def onlyOneEntityQuery(entity):
+def onlyOneEntityQuery(entity, num):
     type = entityType(entity)
     data = []
     link = []
     data.append({'name': entity, 'symbolSize': 30, 'type': type, 'c': 2})
     # 查询
     cypher_ = ("""
-        match (m:%s) - [r] - (b) where m.name contains "%s" return m.name, type(r), b limit 25;
-    """ % (type, entity))
+        match (m:%s) - [r] - (b) where m.name contains "%s" return m.name, type(r), b limit %d;
+    """ % (type, entity, num))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
@@ -68,15 +68,15 @@ def onlyOneEntityQuery(entity):
 
 
 # 只有实体之一，有关系
-def oneOptionAndOneEntityQuery(entity, option):
+def oneOptionAndOneEntityQuery(entity, option, num):
     type = entityType(entity)
     data = []
     link = []
     data.append({'name': entity, 'symbolSize': 30, 'type': type})
     # 查询
     cypher_ = ("""
-        match (m:%s) - [r:%s] - (b) where m.name contains "%s" return m.name, b limit 25;
-    """ % (type, option, entity))
+        match (m:%s) - [r:%s] - (b) where m.name contains "%s" return m.name, b limit %d;
+    """ % (type, option, entity, num))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
@@ -98,15 +98,15 @@ def oneOptionAndOneEntityQuery(entity, option):
 
 
 # 两个实体查询  无关系
-def twoEntityQuery(entity1, entity2):
+def twoEntityQuery(entity1, entity2, num):
     type1 = entityType(entity1)
     type2 = entityType(entity2)
     data = []
     link = []
     # 查询
     cypher_ = ("""
-        match path = (m:%s) - [*..5] - (n:%s) where m.name in ["%s", "%s"] and n.name in ["%s", "%s"] and m.name<>n.name return [node in nodes(path) | [node.name, labels(node) ] ] as node, [rel in relationships(path) | [startNode(rel).name, type(rel), endNode(rel).name] ] as rel limit 1;
-    """ % (type1, type2, entity1, entity2, entity1, entity2))
+        match path = (m:%s) - [*..5] - (n:%s) where m.name in ["%s", "%s"] and n.name in ["%s", "%s"] and m.name<>n.name return [node in nodes(path) | [node.name, labels(node) ] ] as node, [rel in relationships(path) | [startNode(rel).name, type(rel), endNode(rel).name] ] as rel limit %d;
+    """ % (type1, type2, entity1, entity2, entity1, entity2, num))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
@@ -194,7 +194,7 @@ def scoreInfo(province_name, year, category, degree):
     print(year)
     print(category)
     print(degree)
-    if len(degree) == 0:
+    if degree == 'NoneType' or len(degree) == 0:
         degree = '不分层次'
     cypher_ = ("""
         MATCH (n:fractional_line) - [:BELONG_TO] -> (m:province) WHERE m.name = "%s" AND n.year = "%s" AND n.category = "%s" AND n.degree = "%s" RETURN n.detail;
@@ -209,8 +209,4 @@ def scoreInfo(province_name, year, category, degree):
     for key in sorted(data):
         score.append(data[key])
 
-    for i in score:
-        print(i)
-    # print(score)
-
-    return score
+    return score, sorted(data)
