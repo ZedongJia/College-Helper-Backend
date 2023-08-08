@@ -37,7 +37,8 @@ def onlyOneEntityQuery(entity, num):
     type = entityType(entity)
     data = []
     link = []
-    data.append({'name': entity, 'symbolSize': 30, 'type': type, 'c': 2})
+    entity_type=[]
+    data.append({'name': entity, 'symbolSize': 60, 'type': entityType(entity), 'c': 2})
     # 查询
     cypher_ = ("""
         match (m:%s) - [r] - (b) where m.name contains "%s" return m.name, type(r), b limit %d;
@@ -55,16 +56,20 @@ def onlyOneEntityQuery(entity, num):
                 'type': ",".join(list(i['b'].labels)),
                 'c': 1
             }
-            data.append(r)
+            if r not in data:
+                data.append(r)
     # 获取关系
     for k in res:
-        r_ = {
-            'source': k['m.name'],
-            'label': k['type(r)'],
-            'target': k['b']['name']
-        }
-        link.append(r_)
-    return data, link
+        if k['b']['name'] != None:
+            r = {
+                'source': k['m.name'],
+                'label': k['type(r)'],
+                'target': k['b']['name']
+            }
+            if r not in link:
+                link.append(r)
+    print(link)
+    return data, link, entityType(entity)
 
 
 # 只有实体之一，有关系
