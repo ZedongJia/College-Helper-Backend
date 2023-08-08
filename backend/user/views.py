@@ -304,21 +304,26 @@ def getBrowseInfo(request):
             return JsonResponse({"status": False, "error": "信息错误请重新登录"})
         with connection.cursor() as cursor:
             cursor.execute(
-                "select time, type, content from browsing_history where isHistory = 'true' and user_id = %s order by time desc;",
+                "select id, time, type, content from browsing_history where isHistory = 'true' and user_id = %s order by time desc;",
                 (ID,),
             )
             browseInfo = {}
             g_time_str = datetime(1600, 1, 1, 1, 1, 1).date().strftime("%Y年%m月%d日")
             browseHistory = cursor.fetchall()
             for row in browseHistory:
-                b_time, type, content = row
+                browse_id, b_time, type, content = row
                 time_str = b_time.date().strftime("%Y年%m月%d日")
                 if time_str != g_time_str:
                     g_time_str = time_str
                     browseInfo[g_time_str] = []
                 b_time = b_time.time()
                 browseInfo[str(g_time_str)].append(
-                    {"time": b_time, "type": type, "content": content}
+                    {
+                        "time": b_time,
+                        "type": type,
+                        "content": content,
+                        "browse_id": browse_id,
+                    }
                 )
             return JsonResponse({"status": True, "browseInfo": browseInfo})
     # 删除历史记录
@@ -326,16 +331,29 @@ def getBrowseInfo(request):
         ID = request.session.get("id", None)
         if ID is None:
             return JsonResponse({"status": False, "error": "信息错误请重新登录"})
-        b_time = request.POST.get("time")
-        type = request.POST.get("type")
-        content = request.POST.get("content")
+        browse_id = request.POST.get("browse_id")
 
         with connection.cursor() as cursor:
             cursor.execute(
-                "update browsing_history set isHistory = 'false' where user_id=%s and time = %s and type = %s and content = %s;",
-                (ID, datetime.strptime(b_time, "%Y年%m月%d日%H:%M:%S"), type, content),
+                "update browsing_history set isHistory = 'false' where id=%s",
+                (browse_id,),
             )
+            removeUnusedHistory()
             return JsonResponse({"status": True})
+
+@require_http_methods(["POST"])
+def star(request):
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    browse_id = request.POST.get("browse_id")
+    state = request.POST.get("state")
+    # todo
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "update browsing_history set isCollected=%s where id=%s", (state, browse_id)
+        )
+        return JsonResponse({"status": True})
 
 
 # 根据用户ID 获取、删除收藏记录
@@ -347,14 +365,14 @@ def getCollectionInfo(request):
             return JsonResponse({"status": False, "error": "信息错误请重新登录"})
         with connection.cursor() as cursor:
             cursor.execute(
-                "select time, type, content from browsing_history where isCollected = 'true' and user_id = %s order by time desc;",
+                "select id, time, type, content from browsing_history where isCollected = 'true' and user_id = %s order by time desc;",
                 (ID,),
             )
             collectionHistory = cursor.fetchall()
             collectionInfo = {}
             curr_type = ""
             for row in collectionHistory:
-                c_time, type, content = row
+                collection_id, c_time, type, content = row
                 if type != curr_type:
                     curr_type = type
                     collectionInfo[curr_type] = []
@@ -363,6 +381,7 @@ def getCollectionInfo(request):
                         "time": c_time.strftime("%Y年%m月%d日 %H:%M:%S"),
                         "type": type,
                         "content": content,
+                        "collection_id": collection_id
                     }
                 )
             return JsonResponse({"status": True, "collectionInfo": collectionInfo})
@@ -371,17 +390,21 @@ def getCollectionInfo(request):
         id = request.session.get("id", None)
         if id is None:
             return JsonResponse({"status": False, "error": "信息错误请重新登录"})
-        c_time = request.POST.get("time")
-        type = request.POST.get("type")
-        content = request.POST.get("content")
+        collection_id = request.POST.get("collection_id")
 
         with connection.cursor() as cursor:
             cursor.execute(
-                "update browsing_history set isCollected = 'false' where user_id=%s and time = %s and type = %s and content = %s;",
-                (ID, datetime.strptime(c_time, "%Y年%m月%d日 %H:%M:%S"), type, content),
+                "update browsing_history set isCollected = 'false' where id=%s",
+                (collection_id,),
             )
+            removeUnusedHistory()
             return JsonResponse({"status": True})
 
+def removeUnusedHistory():
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "delete from browsing_history where isHistory = 'false' and isCollected='false'",
+        )
 
 # 根据id获取聊天session和对象
 @require_http_methods(["GET"])
@@ -504,9 +527,10 @@ def dropSession(request):
     session_id = request.POST.get("session_id")
     with connection.cursor() as cursor:
         cursor.execute(
-            "delete from session where user_id=%s and id=%s", (id, session_id)
+            "delete from session where id=%s", (session_id,)
         )
         return JsonResponse({"status": True})
+
 
 @require_http_methods(["POST"])
 def addBrowseInfo(request):
@@ -522,13 +546,16 @@ def addBrowseInfo(request):
     content = request.POST.get("content", None)
     with connection.cursor() as cursor:
         cursor.execute(
-            "insert into browsing_history values(%s, %s, %s, %s, 'false', 'true')",
+            "insert into browsing_history values(null, %s, %s, %s, %s, 'false', 'true')",
             (str(ID), time, type, content),
         )
-    
-    return JsonResponse({"status": True})
+        cursor.execute(
+            "select id from browsing_history where user_id=%s order by time desc",
+            (str(ID),),
+        )
+        browse_id = cursor.fetchone()[0]
 
-# 新增------
+    return JsonResponse({"status": True, "browse_id": browse_id})
 
 
 @require_http_methods(["GET"])
@@ -545,6 +572,28 @@ def queryFollow(request):
         return JsonResponse({"status": True, "msg": "exist"})
     else:
         return JsonResponse({"status": True, "msg": "not exist"})
+
+
+@require_http_methods(["GET"])
+def queryFollowList(request):
+    id = request.session.get("id", None)
+    if id is None:
+        return JsonResponse({"status": False, "error": "信息错误请重新登录"})
+    with connection.cursor() as cursor:
+        cursor.execute("select follow_id from follow where user_id=%s", (id,))
+        follow_id_list = cursor.fetchall()
+        followList = []
+        for f in follow_id_list:
+            f = f[0]
+            cursor.execute("select nickname, image from user where id=%s", (f,))
+            nickname, image = cursor.fetchone()
+            follow = {
+                'id': f,
+                'nickname': nickname,
+                'image': image
+            }
+            followList.append(follow)
+        return JsonResponse({"status": True, "followList": followList})
 
 
 @require_http_methods(["GET"])
@@ -635,20 +684,25 @@ def queryFeedback(request):
     if id is None:
         return JsonResponse({"status": False, "error": "信息错误请重新登录"})
     with connection.cursor() as cursor:
-        cursor.execute("select id, type, time, state, question, advice from feedback where user_id=%s", (id,))
+        cursor.execute(
+            "select id, type, time, state, question, advice from feedback where user_id=%s",
+            (id,),
+        )
         ret = cursor.fetchall()
         feedbackDict = {}
-        _typeDict = {
-            'entity': '实体',
-            'relation': '关系',
-            'addNew': '新增'
-        }
+        _typeDict = {"entity": "实体", "relation": "关系", "addNew": "新增"}
         for f in ret:
-            _type = f[1]
+            _type = _typeDict[f[1]]
             if feedbackDict.get(_type, None) is None:
-                feedbackDict[_typeDict[_type]] = []
-            feedbackDict[_typeDict[_type]].append(
-                {"time": str(f[2]).replace('T', ' '), "id": f[0], "state": f[3], "question": f[4], "advice": f[5]}
+                feedbackDict[_type] = []
+            feedbackDict[_type].append(
+                {
+                    "time": str(f[2]).replace("T", " "),
+                    "id": f[0],
+                    "state": f[3],
+                    "question": f[4],
+                    "advice": f[5],
+                }
             )
         return JsonResponse({"status": True, "feedbackDict": feedbackDict})
 
@@ -663,7 +717,7 @@ def addFeedback(request):
     advice = request.POST.get("advice")
     image = request.FILES.get("imgSrc", None)
     if image is None:
-        image = b''
+        image = b""
     else:
         image = image.read()
     with connection.cursor() as cursor:
@@ -726,6 +780,7 @@ def addReview(request):
         )
 
     return JsonResponse({"status": True})
+
 
 @require_http_methods(["POST"])
 def removeReview(request):

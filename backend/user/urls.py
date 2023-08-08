@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+
 """
 
 注意命名驼峰
@@ -18,9 +19,8 @@ urlpatterns = [
     path("getOpenInfo", views.getOpenInfo, name="getOpenInfo"),
     path("getBrowseInfo", views.getBrowseInfo, name="getBrowseInfo"),
     path("addBrowseInfo", views.addBrowseInfo, name="addBrowseInfo"),
-    path("getCollectionInfo",
-         views.getCollectionInfo,
-         name="getCollectionInfo"),
+    path("getCollectionInfo", views.getCollectionInfo, name="getCollectionInfo"),
+    path("star", views.star, name="star"),
     path("getSession", views.getSession, name="getSession"),
     path("getMessageList", views.getMessageList, name="getMessageList"),
     path("addMessage", views.addMessage, name="addMessage"),
@@ -29,6 +29,7 @@ urlpatterns = [
     path("addReview", views.addReview, name="addReview"),
     path("removeReview", views.removeReview, name="removeReview"),
     path("queryFollow", views.queryFollow, name="queryFollow"),
+    path("queryFollowList", views.queryFollowList, name="queryFollowList"),
     path("querySession", views.querySession, name="querySession"),
     path("queryFeedback", views.queryFeedback, name="queryFeedback"),
     path("follow", views.follow, name="follow"),
