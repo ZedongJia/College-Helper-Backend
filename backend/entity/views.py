@@ -229,15 +229,15 @@ def RelationQuery(request):
         entity = entity1 if len(entity2) == 0 else entity2
         # 未选择关系
         if len(option) == 0:
-            data, link = neo4j.onlyOneEntityQuery(entity)
+            data, link = neo4j.onlyOneEntityQuery(entity, 25)
         # 选择关系
         else:
-            data, link = neo4j.oneOptionAndOneEntityQuery(entity, option)
+            data, link = neo4j.oneOptionAndOneEntityQuery(entity, option, 25)
     # 情况2：2个实体
     else:
         # 未选择关系
         if len(option) == 0:
-            data, link = neo4j.twoEntityQuery(entity1, entity2)
+            data, link = neo4j.twoEntityQuery(entity1, entity2, 1)
         # 选择关系
         else:
             data, link = neo4j.oneOptionAndtTwoEntityQuery(entity1, option, entity2)
@@ -266,6 +266,10 @@ def getProYearsInfo(request):
     province = neo4j.province_list
     # 获取年份信息
     years, province = neo4j.yearsInfo(province_name)
+    not_exists = [ '新疆', '香港', '澳门', '台湾', '西藏' ]
+    for k in not_exists:
+        if k in province:
+            province.remove(k)
     return JsonResponse(json.dumps({"years": years, "province": province}), safe=False)
 
 
@@ -289,7 +293,6 @@ def getScoreInfo(request):
     category = request.GET.get("category", None)
     degree = request.GET.get("degree", None)
     # 获取 detail 信息
-    detail = neo4j.scoreInfo(province_name, year, category, degree)
-    for i in detail:
-        print(i["rank"])
-    return JsonResponse(json.dumps({"detail": detail}), safe=False)
+    detail, keys = neo4j.scoreInfo(province_name, year, category, degree)
+
+    return JsonResponse(json.dumps({"detail": detail,'keys': keys}), safe=False)
