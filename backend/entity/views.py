@@ -12,6 +12,32 @@ from models.recognize import Recognize
 def index(request):
     return HttpResponse("hello")
 
+def typeColar(type):
+    if type=='university':
+        return 0
+    elif type=='city':
+        return 1
+    elif type=='province':
+        return 2
+    elif type=='living_condition':
+        return 3
+    elif type=='main_branch':
+        return 4
+    elif type=='major':
+        return 5
+    elif type.find('person')>=0:
+        return 6
+    elif type=='major_line':
+        return 7
+    elif type=='total_line':
+        return 8
+    elif type=='sub_branch':
+        return 9
+    elif type=='fractional_line':
+        return 10
+    elif type.find('policy')>=0:
+        return 11
+    return 0
 
 @require_http_methods(["POST"])
 def cut_sentence(request):
@@ -249,15 +275,17 @@ def RelationQuery(request):
 
 @require_http_methods(["GET"])
 def IntelligentQuery(request):
-    # entity = request.GET.get("entity", None)
-    # if entity is None:
-    #     return JsonResponse({ "error": "输入错误请重试"})
-    # entityGroup=Recognize.recognize(entity)
-    # for key in entityGroup['cut_dict']:
-    #     data, link = neo4j.onlyOneEntityQuery(entityGroup['cut_dict'][key]['name'])
-    # d_ = { 'data': data, 'link': link }
-    # return JsonResponse(json.dumps(d_), safe=False)
-    return HttpResponse(200)
+    entity = request.GET.get("entity", None)
+    if entity is None:
+        return JsonResponse({ "error": "输入错误请重试"})
+    entityGroup=Recognize.recognize(entity)
+    for key in entityGroup['cut_dict']:
+        data, link = neo4j.onlyOneEntityQuery(entityGroup['cut_dict'][key]['name'])
+    d_ = { 'data': data, 'link': link }
+    for d in d_['data']:
+        d['c']=typeColar(d['type'])
+    print(d_)
+    return JsonResponse(json.dumps(d_), safe=False)
 
 # 获取某一省的全部信息
 # 必选参数：province_name
