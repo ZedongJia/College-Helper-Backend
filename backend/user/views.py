@@ -446,7 +446,7 @@ def getSession(request):
             # 查询用户信息
             cursor.execute("select nickname, image from user where id=%s", (id,))
             info = cursor.fetchone()
-            info = {"id": id, "img": info[1], "content": info[0]}
+            info = {"id": id, "image": info[1], "content": info[0]}
             if id in follow_id_list:
                 sessionInfo["好友"].append(
                     {"time": s_time, "info": info, "session_id": session_id}
