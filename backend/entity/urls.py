@@ -11,5 +11,6 @@ urlpatterns = [
     path("getCateDegreeInfo/",
          views.getCateDegreeInfo,
          name="getCateDegreeInfo"),
-    path("getScoreInfo/", views.getScoreInfo, name="getScoreInfo")
+    path("getScoreInfo/", views.getScoreInfo, name="getScoreInfo"),
+    path("scoreRecommend/", views.ScoreRecommend, name="ScoreRecommend")
 ]
