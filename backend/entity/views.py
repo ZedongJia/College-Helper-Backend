@@ -255,6 +255,7 @@ def RelationQuery(request):
     entity1 = request.GET.get("entity1", None)
     option = request.GET.get("option", None)
     entity2 = request.GET.get("entity2", None)
+    print(option)
     data = []
     link = []
     # 至少一个实体
@@ -265,24 +266,23 @@ def RelationQuery(request):
         entity = entity1 if len(entity2) == 0 else entity2
         # 未选择关系
         if len(option) == 0:
-            data, link = neo4j.onlyOneEntityQuery(entity, 25)
+            data, link, type = neo4j.onlyOneEntityQuery(entity, 25)
         # 选择关系
         else:
             data, link = neo4j.oneOptionAndOneEntityQuery(entity, option, 25)
     # 情况2：2个实体
     else:
         # 未选择关系
-        if len(option) == 0:
+        if len(option) == 0 or option == None:
             data, link = neo4j.twoEntityQuery(entity1, entity2, 1)
         # 选择关系
         else:
             data, link = neo4j.oneOptionAndtTwoEntityQuery(
                 entity1, option, entity2)
-        d_ = {"data": data, "link": link}
-        return JsonResponse(json.dumps(d_), safe=False)
-
-    return JsonResponse(json.dumps({"data": data, "link": link}), safe=False)
-
+    d_ = {"data": data, "link": link}
+    for d in d_['data']:
+        d['c'] = typeColar(d['type'])
+    return JsonResponse(json.dumps(d_), safe=False)
 
 @require_http_methods(["GET"])
 def IntelligentQuery(request):
@@ -299,12 +299,15 @@ def IntelligentQuery(request):
     relation_link = []
     entity_link = []
     # 节点名字
-    data_name=[]
+    data_name = []
     for key in entityGroup['cut_dict']:
         print(3, entityGroup['cut_dict'][key]['name'])
         temp_data, temp_link, type = neo4j.onlyOneEntityQuery(
             entityGroup['cut_dict'][key]['name'], num)
-        entity_link.append({ 'name':entityGroup['cut_dict'][key]['name'],'type':type })
+        entity_link.append({
+            'name': entityGroup['cut_dict'][key]['name'],
+            'type': type
+        })
         for d in temp_data:
             if d not in data:
                 data.append(d)
@@ -313,7 +316,11 @@ def IntelligentQuery(request):
             if l not in relation_link:
                 if l['source'] in data_name:
                     relation_link.append(l)
-    d_ = {'data': data, 'relation_link': relation_link,'entity_link':entity_link}
+    d_ = {
+        'data': data,
+        'relation_link': relation_link,
+        'entity_link': entity_link
+    }
     for d in d_['data']:
         d['c'] = typeColar(d['type'])
     return JsonResponse(json.dumps(d_), safe=False)
@@ -362,7 +369,6 @@ def getCateDegreeInfo(request):
     }),
                         safe=False)
 
-
 # 参数：provinceName, year, category, (degree)
 @require_http_methods(["GET"])
 def getScoreInfo(request):
@@ -378,3 +384,28 @@ def getScoreInfo(request):
         'keys': keys
     }),
                         safe=False)
+
+
+@require_http_methods(["GET"])
+def ScoreRecommend(request):
+    province_name = request.GET.get("provinceName", None)
+    myScore = request.GET.get("myScore", None)
+    # 获取 detail 信息
+    detail_dict = neo4j.ScoreRecommend(province_name, myScore)
+    # 加工  全部传到前端
+    # title: university_name
+    # content: '专业名称：' + item_dict['m.name'] + '\n' + '专业排名：' + item_dict['m.ruanKeScore'] + '\n'
+    #           + '往年最低录取分数/排名：' + item_dict['n.lowScore']
+    # link: 大学或专业 对应的详情界面
+    data = []
+    print(detail_dict)
+    num = 0
+    for item_dict in detail_dict:
+        content = '专业名称：<a>' + item_dict['m.name'] + '</a>\n' + '专业排名：' + item_dict['m.ruanKeScore'] + '\n' + '往年最低录取分数/排名：' + item_dict['n.lowScore']
+        link = 'http://localhost:8080/#/system/identification/detailContent?name=' +  item_dict["name"] +  '&label=university'
+        data.append({ 'title': item_dict["name"], 'content': content, 'link': link })
+        num += 1
+        if num == 20:
+            break
+
+    return JsonResponse(json.dumps(data), safe=False)

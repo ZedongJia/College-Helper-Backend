@@ -1,8 +1,10 @@
 from neo4j_model.db_pool import NEO4j_POOL
 import json
 from py2neo import Relationship
+from models.recognize import Recognize
 
 # 获取所有省、市、大学、祖专业、父专业、专业的四个列表
+#     # 政策、person、major、university、省份、城市
 
 
 def get_list(path):
@@ -12,13 +14,16 @@ def get_list(path):
     list = []
     for i in info:
         list.append(i['n.name'])
+    f.close()
     return list
-
 
 province_list = get_list('entity/data/province.json')
 city_list = get_list('entity/data/city.json')
-university_list = get_list('entity/data/university.json')
-major_list = get_list('entity/data/major.json')
+province_id_dict = {}
+with open('entity/data/province_idx.txt', 'r', encoding='utf8') as f:
+    info = f.readlines()
+for p_ in info:
+    province_id_dict[p_.strip().split(',')[1]] = p_.strip().split(',')[0]
 
 
 def entityType(temp):
@@ -26,142 +31,94 @@ def entityType(temp):
         return 'province'
     elif temp in city_list:
         return 'city'
-    elif temp in university_list:
-        return 'university'
     else:
-        return 'major'
+        try:
+            t = Recognize.recognize(temp)['cut_dict'][0]['label']
+        except Exception:
+            t = None
+        return t
 
+def getDataAndLink(res):
+    data = []
+    link = []
+    name = []
+    for path in res:
+        # path = { 'node', 'rel' }
+        # 获取节点
+        for k in path['node']:
+            # k = ['name', ['type']]
+            k[0] = k[1][0] if k[0] == None else k[0]
+            if k[0] not in name:
+                name.append(k[0])
+                r = {'name': k[0], 'symbolSize': 60, 'c': 1, 'type': k[1][0]}
+                data.append(r)
+        # 获取关系
+        for j in path['rel']:
+            j[0] = j[1][0] if j[0] == None else j[0]
+            j[3] = j[4][0] if j[3] == None else j[3]
+            r_ = {'source': j[0], 'label': j[2], 'target': j[3]}
+            link.append(r_)
+    return data, link
 
 # 只有实体之一，无关系:
 def onlyOneEntityQuery(entity, num):
     type = entityType(entity)
-    data = []
-    link = []
-    entity_type=[]
-    data.append({'name': entity, 'symbolSize': 60, 'type': entityType(entity), 'c': 2})
+    if type == None:
+        return [], [], type
     # 查询
     cypher_ = ("""
-        match (m:%s) - [r] - (b) where m.name contains "%s" return m.name, type(r), b limit %d;
+        match path = (m:%s) - [r] - (n) where m.name contains "%s" return [node in nodes(path) | [node.name, labels(node)]] as node, [rel in relationships(path) | [startNode(rel).name, labels(startNode(rel)), type(rel), endNode(rel).name, labels(endNode(rel))]] as rel limit %d;
     """ % (type, entity, num))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
-    # 获取数据
-    for i in res:
-        # name是字符串   type是列表
-        if i['b']['name'] != None:
-            r = {
-                'name': i['b']['name'],
-                'symbolSize': 60,
-                'type': ",".join(list(i['b'].labels)),
-                'c': 1
-            }
-            if r not in data:
-                data.append(r)
-    # 获取关系
-    for k in res:
-        if k['b']['name'] != None:
-            r = {
-                'source': k['m.name'],
-                'label': k['type(r)'],
-                'target': k['b']['name']
-            }
-            if r not in link:
-                link.append(r)
-    print(link)
-    return data, link, entityType(entity)
+    data, link = getDataAndLink(res)
+    return data, link, type
 
-
-# 只有实体之一，有关系
+# 一个实体查询  有关系
 def oneOptionAndOneEntityQuery(entity, option, num):
     type = entityType(entity)
-    data = []
-    link = []
-    data.append({'name': entity, 'symbolSize': 30, 'type': type})
+    if type == None:
+        return [], []
     # 查询
     cypher_ = ("""
-        match (m:%s) - [r:%s] - (b) where m.name contains "%s" return m.name, b limit %d;
+        match path = (m:%s) - [r:%s] - (n) where m.name = "%s" return [node in nodes(path) | [node.name, labels(node)]] as node, [rel in relationships(path) | [startNode(rel).name, labels(startNode(rel)), type(rel), endNode(rel).name, labels(endNode(rel))]] as rel limit %d;
     """ % (type, option, entity, num))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
-    # 获取数据
-    for i in res:
-        # name是字符串   type是列表
-        r = {
-            'name': i['b']['name'],
-            'symbolSize': 30,
-            'c': 1,
-            'type': ",".join(list(i['b'].labels))
-        }
-        data.append(r)
-    # 获取关系
-    for k in res:
-        r_ = {'source': k['m.name'], 'label': option, 'target': k['b']['name']}
-        link.append(r_)
-    return data, link
 
+    return getDataAndLink(res)
 
 # 两个实体查询  无关系
 def twoEntityQuery(entity1, entity2, num):
     type1 = entityType(entity1)
     type2 = entityType(entity2)
-    data = []
-    link = []
+    if type1 == None or type2 == None:
+        return [], []
     # 查询
     cypher_ = ("""
-        match path = (m:%s) - [*..5] - (n:%s) where m.name in ["%s", "%s"] and n.name in ["%s", "%s"] and m.name<>n.name return [node in nodes(path) | [node.name, labels(node) ] ] as node, [rel in relationships(path) | [startNode(rel).name, type(rel), endNode(rel).name] ] as rel limit %d;
-    """ % (type1, type2, entity1, entity2, entity1, entity2, num))
+        match path = (m:%s) - [*..5] - (n:%s) where m.name = "%s" and n.name = "%s" and m.name <> n.name return [node in nodes(path) | [node.name, labels(node)]] as node, [rel in relationships(path) | [startNode(rel).name, labels(startNode(rel)), type(rel), endNode(rel).name, labels(endNode(rel))]] as rel limit %d;
+    """ % (type1, type2, entity1, entity2, num))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
 
-    name = []
-    for path in res:
-        # path = { 'node', 'rel' }
-        # 获取节点
-        for k in path['node']:
-            # k = ['name', ['type']]
-            if k[0] not in name and k[0] != None:
-                name.append(k[0])
-                r = {'name': k[0], 'symbolSize': 30, 'c': 1, 'type': k[1][0]}
-                data.append(r)
-        # 获取关系
-        for j in path['rel']:
-            r_ = {'source': j[0], 'label': j[1], 'target': j[2]}
-            link.append(r_)
-    return data, link
-
+    return getDataAndLink(res)
 
 # 两个实体查询  有关系
 def oneOptionAndtTwoEntityQuery(entity1, option, entity2):
     type1 = entityType(entity1)
     type2 = entityType(entity2)
-    data = []
-    link = []
-    data.append({'name': entity1, 'symbolSize': 30, 'type': type1})
-    data.append({'name': entity2, 'symbolSize': 30, 'type': type2})
+    if type1 == None or type2 == None:
+        return [], []
     # 查询
     cypher_ = ("""
-        match path = (m:%s) - [*1..3] - (b:%s) where m.name contains "%s" and b.name contains "%s" and any(rel in relationships(path) where type(rel) = "%s") return [node in nodes(path) | [node.name, labels(node) ] ] as node, [rel in relationships(path) | [startNode(rel).name, type(rel), endNode(rel).name] ] as rel;
+        match path = (m:%s) - [*1..2] - (b:%s) where m.name contains "%s" and b.name contains "%s" and any(rel in relationships(path) where type(rel) = "%s") return [node in nodes(path) | [node.name, labels(node) ] ] as node, [rel in relationships(path) | [startNode(rel).name, labels(startNode(rel)), type(rel), endNode(rel).name, labels(endNode(rel))] ] as rel;
     """ % (type1, type2, entity1, entity2, option))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
-    name = []
-    for path in res:
-        # path = { 'node', 'rel' }
-        # 获取节点
-        for k in path['node']:
-            # k = ['name', ['type']]
-            if k[0] not in name and k[0] != None:
-                name.append(k[0])
-                r = {'name': k[0], 'symbolSize': 30, 'c': 1, 'type': k[1][0]}
-                data.append(r)
-        # 获取关系
-        for j in path['rel']:
-            r_ = {'source': j[0], 'label': j[1], 'target': j[2]}
-            link.append(r_)
 
     return data, link
 
@@ -195,23 +152,49 @@ def cateDegreeInfo(province_name, year):
 
 def scoreInfo(province_name, year, category, degree):
     # 查询
-    print(province_name)
-    print(year)
-    print(category)
-    print(degree)
     if degree == 'NoneType' or len(degree) == 0:
         degree = '不分层次'
     cypher_ = ("""
-        MATCH (n:fractional_line) - [:BELONG_TO] -> (m:province) WHERE m.name = "%s" AND n.year = "%s" AND n.category = "%s" AND n.degree = "%s" RETURN n.detail;
+        match (n:fractional_line) - [:BELONG_TO] -> (m:province) where m.name = "%s" and n.year = "%s" and n.category = "%s" and n.degree = "%s" return n.detail;
     """ % (province_name, year, category, degree))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
     # dict_keys([0]['n.detail'])
-    print(res)
     data = json.loads(res[0]['n.detail'])
     score = []
     for key in sorted(data):
         score.append(data[key])
 
     return score, sorted(data)
+
+# match (p:province) - [:REFER] -> (n:major_line) <- [:SET] - (m:major) where p.name = '安徽' and  n.year = '2022' and n.lowScore > '650' return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore limit 5;
+def ScoreRecommend(province, myScore):
+    # 获取区间
+    minScore = myScore[0] + '00'
+    if minScore == '700':
+        minScore = '660'
+    province_id = province_id_dict[province]
+    # 查询
+    cypher_ = ("""
+        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and n.lowScore < "%s" and n.lowScore > "%s" return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
+    """ % (int(province_id), myScore, minScore))
+    conn = NEO4j_POOL.getConnect()
+    res = conn.run(cypher_).data()
+    # 处理数据 返回 m.name, m.ruanKeScore, m.fk_university_id, n.lowScore 
+    universitys_id_name = {}
+    for item_dict in res:
+        item_dict["m.ruanKeScore"] = '暂无数据' if item_dict["m.ruanKeScore"] == '' else item_dict["m.ruanKeScore"]
+        if item_dict["m.fk_university_id"] not in universitys_id_name:
+            universitys_id_name[item_dict["m.fk_university_id"]] = item_dict["m.fk_university_id"]
+    # 再次查询，获取对应大学的名称
+    for i in universitys_id_name.keys():
+        universitys_id_name[i] = conn.run("match (n:university) where n.id = %d return n.name" % (i,)).data()[0]["n.name"]
+    # 添加 res[0] 中每个字典中id对应的名字
+    for k in res:
+        k['name'] = universitys_id_name[k['m.fk_university_id']]
+    NEO4j_POOL.free(conn)
+    # 按照 res 中的 lowScore降序排列
+    res.sort(key = lambda t: t['n.lowScore'], reverse=True)
+
+    return res
