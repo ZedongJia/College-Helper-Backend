@@ -7,7 +7,9 @@ from py2neo import Graph
 import json
 import entity.neo4j as neo4j
 from models.recognize import Recognize
+from models.recommendation import Recommendation
 
+recomd = Recommendation()
 
 def index(request):
     return HttpResponse("hello")
