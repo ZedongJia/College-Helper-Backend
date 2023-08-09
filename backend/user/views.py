@@ -604,7 +604,7 @@ def querySession(request):
         return JsonResponse({"status": False, "error": "信息错误请重新登录"})
     with connection.cursor() as cursor:
         cursor.execute(
-            "select T.id from session as S, session as T where S.id=T.id and S.user_id=%s",
+            "select distinct T.user_id from session as S, session as T where S.id=T.id and S.user_id=%s",
             (id,),
         )
         session_id_list = cursor.fetchall()
