@@ -299,12 +299,15 @@ def IntelligentQuery(request):
     relation_link = []
     entity_link = []
     # 节点名字
-    data_name=[]
+    data_name = []
     for key in entityGroup['cut_dict']:
         print(3, entityGroup['cut_dict'][key]['name'])
         temp_data, temp_link, type = neo4j.onlyOneEntityQuery(
             entityGroup['cut_dict'][key]['name'], num)
-        entity_link.append({ 'name':entityGroup['cut_dict'][key]['name'],'type':type })
+        entity_link.append({
+            'name': entityGroup['cut_dict'][key]['name'],
+            'type': type
+        })
         for d in temp_data:
             if d not in data:
                 data.append(d)
@@ -313,7 +316,11 @@ def IntelligentQuery(request):
             if l not in relation_link:
                 if l['source'] in data_name:
                     relation_link.append(l)
-    d_ = {'data': data, 'relation_link': relation_link,'entity_link':entity_link}
+    d_ = {
+        'data': data,
+        'relation_link': relation_link,
+        'entity_link': entity_link
+    }
     for d in d_['data']:
         d['c'] = typeColar(d['type'])
     return JsonResponse(json.dumps(d_), safe=False)
