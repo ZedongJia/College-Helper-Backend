@@ -253,7 +253,6 @@ def queryEntity(request):
 
 @require_http_methods(["GET"])
 def RelationQuery(request):
-    # 共有三种类型  大学、专业、省份、城市
     entity1 = request.GET.get("entity1", None)
     option = request.GET.get("option", None)
     entity2 = request.GET.get("entity2", None)
@@ -339,7 +338,6 @@ def IntelligentQuery(request):
 # 再默认获取第一个 category 与 degree 对应的一分一段
 # """
 
-
 # 参数：provinceName
 @require_http_methods(["GET"])
 def getProYearsInfo(request):
@@ -380,12 +378,11 @@ def getScoreInfo(request):
     degree = request.GET.get("degree", None)
     # 获取 detail 信息
     detail, keys = neo4j.scoreInfo(province_name, year, category, degree)
-
-    return JsonResponse(json.dumps({
+    print(keys)
+    return JsonResponse({
         "detail": detail,
         'keys': keys
-    }),
-                        safe=False)
+    }, safe=False)
 
 
 @require_http_methods(["GET"])

@@ -604,7 +604,7 @@ def querySession(request):
         return JsonResponse({"status": False, "error": "信息错误请重新登录"})
     with connection.cursor() as cursor:
         cursor.execute(
-            "select T.id from session as S, session as T where S.id=T.id and S.user_id=%s",
+            "select distinct T.user_id from session as S, session as T where S.id=T.id and S.user_id=%s",
             (id,),
         )
         session_id_list = cursor.fetchall()
@@ -669,9 +669,9 @@ def addSession(request):
                 cursor.execute("insert into session values(1, %s)", (id))
                 cursor.execute("insert into session values(1, %s)", (follow_id))
             else:
-                cursor.execute("insert into session values(%s, %s)", (cnt[0], id))
+                cursor.execute("insert into session values(%s, %s)", (cnt[0] + 1, id))
                 cursor.execute(
-                    "insert into session values(%s, %s)", (cnt[0], follow_id)
+                    "insert into session values(%s, %s)", (cnt[0] + 1, follow_id)
                 )
             return JsonResponse({"status": True})
         else:
