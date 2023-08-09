@@ -98,7 +98,7 @@ def twoEntityQuery(entity1, entity2, num):
         return [], []
     # 查询
     cypher_ = ("""
-        match path = (m:%s) - [*..5] - (n:%s) where m.name = "%s" and n.name = "%s" and m.name <> n.name return [node in nodes(path) | [node.name, labels(node)]] as node, [rel in relationships(path) | [startNode(rel).name, labels(startNode(rel)), type(rel), endNode(rel).name, labels(endNode(rel))]] as rel limit %d;
+        match path = (m:%s) - [*1..3] - (n:%s) where m.name contains "%s" and n.name contains "%s" and m.name <> n.name return [node in nodes(path) | [node.name, labels(node)]] as node, [rel in relationships(path) | [startNode(rel).name, labels(startNode(rel)), type(rel), endNode(rel).name, labels(endNode(rel))]] as rel limit %d;
     """ % (type1, type2, entity1, entity2, num))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
@@ -120,8 +120,7 @@ def oneOptionAndtTwoEntityQuery(entity1, option, entity2):
     res = conn.run(cypher_).data()
     NEO4j_POOL.free(conn)
 
-    return data, link
-
+    return getDataAndLink(res)
 
 # 获取某一省份下对应的年份信息
 def yearsInfo(province_name):
@@ -163,10 +162,20 @@ def scoreInfo(province_name, year, category, degree):
     # dict_keys([0]['n.detail'])
     data = json.loads(res[0]['n.detail'])
     score = []
-    for key in sorted(data):
-        score.append(data[key])
+    keys = []
+    data_detail = {}
+    print(type(data))
+    for k_ in data.keys():
+        print(type(k_))
+        data_detail[int(k_.split('-')[0])] =  { k_: data[k_] }
 
-    return score, sorted(data)
+    for key in sorted(data_detail, reverse=True):
+        keys.append(list(data_detail[key].keys())[0])
+        score.append(list(data_detail[key].values())[0])
+    print(keys)
+    print(score)
+    
+    return score, keys
 
 # match (p:province) - [:REFER] -> (n:major_line) <- [:SET] - (m:major) where p.name = '安徽' and  n.year = '2022' and n.lowScore > '650' return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore limit 5;
 def ScoreRecommend(province, myScore):
@@ -177,7 +186,7 @@ def ScoreRecommend(province, myScore):
     province_id = province_id_dict[province]
     # 查询
     cypher_ = ("""
-        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and n.lowScore < "%s" and n.lowScore > "%s" return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
+        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and not n.lowScore contains '-' and n.lowScore < "%s" and n.lowScore > "%s" return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
     """ % (int(province_id), myScore, minScore))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
