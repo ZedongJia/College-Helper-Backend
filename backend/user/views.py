@@ -669,9 +669,9 @@ def addSession(request):
                 cursor.execute("insert into session values(1, %s)", (id))
                 cursor.execute("insert into session values(1, %s)", (follow_id))
             else:
-                cursor.execute("insert into session values(%s, %s)", (cnt[0], id))
+                cursor.execute("insert into session values(%s, %s)", (cnt[0] + 1, id))
                 cursor.execute(
-                    "insert into session values(%s, %s)", (cnt[0], follow_id)
+                    "insert into session values(%s, %s)", (cnt[0] + 1, follow_id)
                 )
             return JsonResponse({"status": True})
         else:
