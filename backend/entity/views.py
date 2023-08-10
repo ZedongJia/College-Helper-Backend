@@ -508,8 +508,9 @@ def getScoreInfo(request):
 def ScoreRecommend(request):
     province_name = request.GET.get("provinceName", None)
     myScore = request.GET.get("myScore", None)
+    branch = request.GET.get("branch", None)
     # 获取 detail 信息
-    detail_dict = neo4j.ScoreRecommend(province_name, myScore)
+    detail_dict = neo4j.ScoreRecommend(province_name, myScore, branch)
     # 加工  全部传到前端
     # title: university_name
     # content: '专业名称：' + item_dict['m.name'] + '\n' + '专业排名：' + item_dict['m.ruanKeScore'] + '\n'
@@ -518,11 +519,11 @@ def ScoreRecommend(request):
     data = []
     num = 0
     for item_dict in detail_dict:
-        content = '专业名称：<a>' + item_dict['m.name'] + '</a>\n' + '专业排名：' + item_dict['m.ruanKeScore'] + '\n' + '往年最低录取分数/排名：' + item_dict['n.lowScore']
-        link = 'http://localhost:8080/#/system/identification/detailContent?name=' +  item_dict["name"] +  '&label=university'
+        content = '专业名称：' + item_dict['m.name'] + '；' + '专业排名：' + item_dict['m.ruanKeScore'] + '；' + '往年最低录取分数/排名：' + item_dict['n.lowScore']
+        link = 'label=university'
         data.append({ 'title': item_dict["name"], 'content': content, 'link': link })
         num += 1
-        if num == 20:
+        if num == 21:
             break
 
     return JsonResponse(json.dumps(data), safe=False)
@@ -561,7 +562,7 @@ def AIChat(request):
             if score != None:
                 score = score.group(1)
                 relationList.append('高考分数' + score + ' 分。')
-                detail_dict = neo4j.ScoreRecommend(province, score)
+                detail_dict = neo4j.ScoreRecommend(province, score, branch)
             else:
                 relationList.append('考生今年高考的排名是 ' + rank + ' 名。')
                 rank = rank.group(1)
@@ -570,17 +571,17 @@ def AIChat(request):
             for item_dict in detail_dict:
                 relationList.append('学校名称：' + item_dict['name'] + '，专业名称：' + item_dict['m.name'])
                 if item_dict['name'] not in name:
-                    data.append({ 'name': item_dict['name'], 'symbolSize': 60, 'c': 1, 'type': entity_type })
+                    data.append({ 'name': item_dict['name'], 'symbolSize': 60, 'c': 1, 'type': 'university' })
                     name.append(item_dict['name'])
                 if item_dict['m.name'] not in name:
-                    data.append({ 'name': item_dict['m.name'], 'symbolSize': 60, 'c': 1, 'type': entity_type })
+                    data.append({ 'name': item_dict['m.name'], 'symbolSize': 60, 'c': 1, 'type': 'major' })
                     name.append(item_dict['m.name'])
                 if item_dict['name'] in name and item_dict['m.name'] in name:
                     link.append({'source': item_dict['name'], 'label': 'HAS', 'target': item_dict['m.name']})
                 num += 1
                 if num >= 10:
                     break
-            relationList.append('请你根据考生的所在地以及向往的大学以及以上可能感兴趣的专业，并参考当前国内各专业的热度情况、薪资情况等因素，为该学生提供合理的专业选择建议。如果成绩不太理想的话，你要适度安慰该考生。')
+            relationList.append('请你根据考生的所在地以及向往的大学以及以上可能可以去的的专业，并参考当前国内各专业的热度情况、薪资情况等因素，为该学生提供合理的专业选择建议。如果成绩不太理想的话，你要适度安慰该考生。')
         # 没有分数，有省有学校   ===>    安徽省的合肥工业大学怎么样 
         elif province != None and len(uni_) != 0:
             province = province.group(1)

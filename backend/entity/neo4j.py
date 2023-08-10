@@ -239,7 +239,7 @@ def universitySpecial(university):
     return data, link
 
 # match (p:province) - [:REFER] -> (n:major_line) <- [:SET] - (m:major) where p.name = '安徽' and  n.year = '2022' and n.lowScore > '650' return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore limit 5;
-def ScoreRecommend(province, myScore):
+def ScoreRecommend(province, myScore, branch):
     # 获取区间
     minScore = int(myScore) - 50
     if minScore < 0:
@@ -247,8 +247,8 @@ def ScoreRecommend(province, myScore):
     province_id = province_id_dict[province]
     # 查询
     cypher_ = ("""
-        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and not n.lowScore contains '-' and toInteger(split(n.lowScore, '/')[0]) < %d and toInteger(split(n.lowScore, '/')[0]) > %d return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
-    """ % (int(province_id), int(myScore), minScore))
+        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and not n.lowScore contains '-' and toInteger(split(n.lowScore, '/')[0]) < %d and toInteger(split(n.lowScore, '/')[0]) > %d and n.branch = "%s" return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
+    """ % (int(province_id), int(myScore), minScore, branch))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     # 处理数据 返回 m.name, m.ruanKeScore, m.fk_university_id, n.lowScore
@@ -269,12 +269,12 @@ def ScoreRecommend(province, myScore):
 
     return res
 
-def RankRecommend(province, myRank):
+def RankRecommend(province, myRank, branch):
     province_id = province_id_dict[province]
     # 查询
     cypher_ = ("""
-        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and not n.lowScore contains '-' and toInteger(split(n.lowScore, '/')[1]) > %d return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
-    """ % (int(province_id), int(myRank)))
+        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and not n.lowScore contains '-' and toInteger(split(n.lowScore, '/')[1]) > %d and n.branch = "%s" return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
+    """ % (int(province_id), int(myRank), mybranch))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
     # 处理数据 返回 m.name, m.ruanKeScore, m.fk_university_id, n.lowScore 
@@ -295,7 +295,7 @@ def RankRecommend(province, myRank):
 
     return res
 
-# 一个实体  一个标签类型  关系
+# 一个实体  一个标签类型  一个关系
 def aiTwoEntityQuery(entity_name, entity_type, num, label):
     type1 = entityType(entity_name)
     if type1 == None:
