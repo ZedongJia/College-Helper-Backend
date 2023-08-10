@@ -23,8 +23,8 @@ def onlyOneEnity(nameAndLabel):
     elif nameAndLabel['label'] == 'major':
         relationList.append('考生想了解' + nameAndLabel['name'] + '的相关信息，我将给你一些信息参考，请你在此基础上回答。')
         cypher_ = """
-            match (m:major) return m.detail limit %d;
-        """ % (nameAndLabel['label'], nameAndLabel['name'], num)
+            match (m:major) return m.detail where m.name = "%s" limit %d;
+        """ % (nameAndLabel['name'], num)
         u_ = conn.run(cypher_).data()
         data.append({ 'name': nameAndLabel['name'], 'symbolSize': 60, 'c': 1, 'type': nameAndLabel['label'] })
         relationList.append(nameAndLabel['name'] + '，简介：' + u_[0]['m.detail'] + '。帮我100字总结')
@@ -32,7 +32,7 @@ def onlyOneEnity(nameAndLabel):
     elif nameAndLabel['label'] in ['person', 'university']:
         relationList.append('考生想了解' + nameAndLabel['name'] + '的相关信息，我将给你一些信息参考，请你在此基础上回答。')
         cypher_ = """
-            match (m:%s) return m.intro limit %d;
+            match (m:%s) return m.intro where m.name = "%s" limit %d;
         """ % (nameAndLabel['label'], nameAndLabel['name'], num)
         u_ = conn.run(cypher_).data()
         data.append({ 'name': nameAndLabel['name'], 'symbolSize': 60, 'c': 1, 'type': nameAndLabel['label'] })
