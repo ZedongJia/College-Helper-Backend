@@ -373,10 +373,11 @@ def RankRecommend(province, myRank, branch='理科'):
     province_id = province_id_dict[province]
     # 查询
     cypher_ = ("""
-        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and not n.lowScore contains '-' and toInteger(split(n.lowScore, '/')[1]) > %d and n.branch = "%s" return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
-    """ % (int(province_id), int(myRank), mybranch))
+        match (n:major_line) <- [:SET] - (m:major) where n.fk_province_id = %d and  n.year = "2022" and not n.lowScore contains '-' and toInteger(split(n.lowScore, '/')[1]) < %d and n.branch = "%s" return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore;
+    """ % (int(province_id), int(myRank), branch))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
+    print(res)
     # 处理数据 返回 m.name, m.ruanKeScore, m.fk_university_id, n.lowScore
     universitys_id_name = {}
     for item_dict in res:

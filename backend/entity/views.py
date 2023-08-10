@@ -572,7 +572,7 @@ def ScoreRecommend(request):
     num = 0
     for item_dict in detail_dict:
         content = '专业名称：' + item_dict['m.name'] + '；' + '专业排名：' + item_dict['m.ruanKeScore'] + '；' + '往年最低录取分数/排名：' + item_dict['n.lowScore']
-        link = 'label=university'
+        link = 'university'
         data.append({ 'title': item_dict["name"], 'content': content, 'link': link })
         num += 1
         if num == 21:
@@ -615,10 +615,10 @@ def AIChat(request):
             if score != None:
                 score = score.group(1)
                 relationList.append('高考分数' + score + ' 分。')
-                detail_dict = neo4j.ScoreRecommend(province, score, branch)
+                detail_dict = neo4j.ScoreRecommend(province, score)
             else:
-                relationList.append("考生今年高考的排名是 " + rank + " 名。")
                 rank = rank.group(1)
+                relationList.append("考生今年高考的排名是 " + rank + " 名。")
                 detail_dict = neo4j.RankRecommend(province, rank)
             name = []
             for item_dict in detail_dict:
@@ -691,7 +691,8 @@ def AIChat(request):
         if content == "":
             relationList.append("这是问题: " + sentence + "请你以上述信息为基础回答。")
             content = chatgpt.AIResponse(relationList)
-    except:
+    except Exception as e:
+        print(e)
         content = chatgpt.AIResponse(sentence)
 
     t1 = []
