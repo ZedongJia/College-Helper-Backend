@@ -109,7 +109,10 @@ class Recommendation:
         lateTime=lateTime.timestamp()
         time=time.timestamp()
         #计算权重
-        factor=(time-earlyTime)/(lateTime-earlyTime)
+        if earlyTime==lateTime:
+            factor=1
+        else:
+            factor=(time-earlyTime)/(lateTime-earlyTime)
         return factor
     
     #计算用户特征向量
