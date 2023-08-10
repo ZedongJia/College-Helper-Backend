@@ -548,17 +548,6 @@ def AIChat(request):
     score = re.search(r'([\d]{1,3})分', sentence)
     rank = re.search(r'([\d]{1,6})[位名位]', sentence)
     province = re.search(r'([^\s]{1,2})省', sentence)
-    if province == None:
-        province = re.search(r'([^\s]{1,2})市', sentence)
-        if province is None:
-            if (sentence.find('内蒙古') != -1):
-                province = '内蒙古'
-            elif (sentence.find('黑龙江') != -1):
-                province = '黑龙江'
-            else:
-                province = None
-        else:
-            province = province.group(1)
     relationList = []
     data = []
     link = []
@@ -569,6 +558,7 @@ def AIChat(request):
         if (score != None or rank != None) and province is None:
             relationList.append('考生未提供具体的省份信息，请委婉的告诉他。所提供的的信息中至少包括 高考分数/排名，所在地区等。')
         elif (score != None or rank != None) and province is not None:
+            province = province.group(1)
             num = 0
             if len(uni_) != 0:
                 relationList.append('考生向往的大学是' + uni_ + '，考生来自' + province + '省。')
@@ -649,6 +639,15 @@ def AIChat(request):
     except:
         content = chatgpt.AIResponse(sentence)
 
-    d_ = { 'data': data, 'link': link, 'content': content }
+    t1 = []
+    for d_ in data:
+        if d_ not in t1:
+            t1.append(d_)
+    l1 = []
+    for l_ in link:
+        if l_ not in l1:
+            l1.append(l_)
+
+    d_ = { 'data': t1, 'link': l1, 'content': content }
     print(d_)
     return JsonResponse(d_, safe=False)

@@ -322,7 +322,7 @@ def aiTwoEntityQuery(entity_name, entity_type, num, label):
     print(res)
     if len(res) != 0:
         for major_dict in res:
-            if major_dict[m.name] == None:
+            if major_dict['m.name'] == None:
                 major_dict['m.name'] = entity_type
             data.append({ 'name': major_dict['m.name'], 'symbolSize': 60, 'c': 1, 'type': entity_type })
             link.append({'source': entity_name, 'label': label, 'target': major_dict['m.name']})
