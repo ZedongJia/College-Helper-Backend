@@ -7,7 +7,9 @@ from py2neo import Graph
 import json
 import entity.neo4j as neo4j
 from models.recognize import Recognize
-
+import models.chatgpt as chatgpt
+import re
+import entity.ai as ai
 
 def index(request):
     return HttpResponse("hello")
@@ -283,12 +285,13 @@ def RelationQuery(request):
         d['c'] = typeColar(d['type'])
     return JsonResponse(json.dumps(d_), safe=False)
 
-@require_http_methods(["GET"])
-def IntelligentQuery(request):
-    entity = request.GET.get("entity", None)
-    if entity is None:
-        return JsonResponse({"error": "输入错误请重试"})
-    entityGroup = Recognize.recognize(entity)
+# 实体查询 功能函数
+"""
+# params ( sentence: str )
+# return { 'data': arr, 'relation_link': arr, 'entity_link': arr }
+"""
+def MultiEntityQuery(sentence):
+    entityGroup = Recognize.recognize(sentence)
     #分词数量
     length = len(entityGroup['cut_dict'])
     #返回节点数量
@@ -300,7 +303,6 @@ def IntelligentQuery(request):
     # 节点名字
     data_name = []
     for key in entityGroup['cut_dict']:
-        print(3, entityGroup['cut_dict'][key]['name'])
         temp_data, temp_link, type = neo4j.onlyOneEntityQuery(
             entityGroup['cut_dict'][key]['name'], num)
         entity_link.append({
@@ -322,8 +324,16 @@ def IntelligentQuery(request):
     }
     for d in d_['data']:
         d['c'] = typeColar(d['type'])
-    return JsonResponse(json.dumps(d_), safe=False)
+    return d_
 
+# 实体查询 主函数
+@require_http_methods(["GET"])
+def IntelligentQuery(request):
+    entity = request.GET.get("entity", None)
+    if entity is None:
+        return JsonResponse({"error": "输入错误请重试"})
+   
+    return JsonResponse(json.dumps(MultiEntityQuery(entity)), safe=False)
 
 # 获取某一省的全部信息
 # 必选参数：province_name
@@ -353,7 +363,6 @@ def getProYearsInfo(request):
     }),
                         safe=False)
 
-
 # 参数：provinceName， year
 @require_http_methods(["GET"])
 def getCateDegreeInfo(request):
@@ -376,12 +385,10 @@ def getScoreInfo(request):
     degree = request.GET.get("degree", None)
     # 获取 detail 信息
     detail, keys = neo4j.scoreInfo(province_name, year, category, degree)
-    print(keys)
     return JsonResponse({
         "detail": detail,
         'keys': keys
     }, safe=False)
-
 
 @require_http_methods(["GET"])
 def ScoreRecommend(request):
@@ -395,7 +402,6 @@ def ScoreRecommend(request):
     #           + '往年最低录取分数/排名：' + item_dict['n.lowScore']
     # link: 大学或专业 对应的详情界面
     data = []
-    print(detail_dict)
     num = 0
     for item_dict in detail_dict:
         content = '专业名称：<a>' + item_dict['m.name'] + '</a>\n' + '专业排名：' + item_dict['m.ruanKeScore'] + '\n' + '往年最低录取分数/排名：' + item_dict['n.lowScore']
@@ -406,3 +412,122 @@ def ScoreRecommend(request):
             break
 
     return JsonResponse(json.dumps(data), safe=False)
+
+# 返回参数  data, link, relationList
+@require_http_methods(["GET"])
+def AIChat(request):
+    # 前端判断是否为空
+    sentence = request.GET.get("sentence", None)
+    entityInSentence_dict = Recognize.recognize(sentence)['cut_dict']
+    nameAndLabel = []
+    uni_ = ''
+    for pos_key in entityInSentence_dict.keys():
+        nameAndLabel.append(entityInSentence_dict[pos_key])
+        if entityInSentence_dict[pos_key]['label'] == 'university':
+            uni_ = entityInSentence_dict[pos_key]['name']
+    # 正则匹配 省/分数/排名
+    score = re.search(r'([\d]{1,3})分', sentence)
+    rank = re.search(r'([\d]{1,6})[位名位]', sentence)
+    province = re.search(r'([^\s]{1,2})省', sentence)
+    relationList = []
+    data = []
+    link = []
+    content = ''
+    # 有分数/排名，所在地(想去的大学)
+    # 我考了 xxx 分 / 排名 xxx，我能去哪所大学/读什么专业，  我来自 xxx，我考了 xxx 分/排名，我想去 xxx大学
+    if (score != None or rank != None) and province != None:
+        num = 0
+        print('---------------------------------')
+        province = province.group(1)
+        if len(uni_) != 0:
+            relationList.append('考生向往的大学是' + uni_ + '，考生来自' + province + '省。')
+        if score != None:
+            score = score.group(1)
+            relationList.append('高考分数' + score + ' 分。')
+            detail_dict = neo4j.ScoreRecommend(province, score)
+            for item_dict in detail_dict:
+                relationList.append('学校名称：' + item_dict['name'] + '专业名称：' + item_dict['m.name'])
+                num += 1
+                if num >= 10:
+                    break
+        else:
+            relationList.append('考生今年高考的排名是 ' + rank + ' 名。')
+            rank = rank.group(1)
+            detail_dict = neo4j.RankRecommend(province, rank)
+            for item_dict in detail_dict:
+                relationList.append('专业名称：' + item_dict['m.name'])
+                num += 1
+                if num >= 10:
+                    break
+        relationList.append('请你根据考生的所在地以及向往的大学以及以上可能感兴趣的专业，并参考当前国内各专业的热度情况、薪资情况等因素，为该学生提供合理的专业选择建议。如果成绩不太理想的话，你要适度安慰该考生。')
+    # 没有分数，有省有学校   ===>    安徽省的合肥工业大学怎么样 
+    elif province != None and len(uni_) != 0:
+        province = province.group(1)
+        data, link = neo4j.twoEntityQuery(province, uni_, 10)
+        relationList.append('考生向往的大学是' + uni_ )
+    # 未输入 分数/排名/大学 信息  ==>  不查可以去的 大学/专业  ==>  xxx省有什么大学 | xxx大学有什么特色，招生政策。。。 |  
+    elif (province != None and len(uni_) == 0) or (province == None and len(uni_) != 0):
+        name = province.group(1) if province != None else uni_
+        relationList.append('考生的问题是：' + sentence + '。我将给你部分信息，请你在此基础上完善补充总结。')
+        if sentence.find('人') > -1:
+            u_ = 'person'
+            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'BELONG_TO')
+        elif sentence.find("特色") > -1:
+            u_ = 'special'
+            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'RELATED_TO')
+        elif sentence.find("分数线") > -1 or sentence.find("招生政策") > -1:
+            u_ = 'total_line'
+            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'SET')
+        elif sentence.find("食宿环境") > -1 or sentence.find("住宿环境") > -1:
+            u_ = 'living_condition'
+            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'BELONG_TO')
+        elif sentence.find("哪些大学") > -1 or sentence.find("什么大学") > -1:
+            data, link, relationList = ai.onlyOneEnity({ 'name': name, 'label': 'province' })
+        elif sentence.find("哪些专业") > -1 or sentence.find("什么专业") > -1:
+            print('--------------------')
+            u_ = 'major'
+            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'HAS')
+        elif len(nameAndLabel) == 1:
+            data, link, relationList = ai.onlyOneEnity(nameAndLabel[0])
+        elif len(nameAndLabel) == 2:
+            data, link = neo4j.twoEntityQuery(nameAndLabel[0]['name'], nameAndLabel[1]['name'], 1)
+        # 关系太多，直接调用接口
+        else:
+            content = chatgpt.AIResponse(sentence)
+        t = 0
+        if len(data) != 0 and len(relationList) == 1:
+            for item_dict in data:
+                if item_dict['name'] == None:
+                    item_dict['name'] = item_dict['type']
+                relationList.append('名称：' + item_dict['name'])
+                t += 1
+                if t >= 10:
+                    break
+    # 不含有任何实体或省份等，直接调用接口
+    else:
+        content = chatgpt.chatChoice(sentence)
+
+    if content == '':
+        relationList.append('这是问题: ' + sentence + '请你以上述信息为基础回答：')
+        content = chatgpt.AIResponse(relationList)
+    d_ = { 'data': data, 'link': link, 'content': content }
+    # d_ = { 'data': data, 'link': link, 'content': 'hello' }
+    return JsonResponse(d_, safe=False)
+
+    #     
+    #     # xxx学校 有 专业/食宿环境
+    #     # xxx学校 对 xxx城市/省份 有 招生政策
+    #     # xxx学校 xxx专业 最低分数线
+    #     # university - [:HAS] - [:major]
+    #     # 我是天津人，我想去安徽
+    #     #     1            7
+    #     #     7            1
+    #     # ’是‘，’来自‘，
+    #     # ’去’，‘到’，‘考’
+    #     return HttpResponse(200)
+
+    # xxx省有什么大学 | xxx大学有什么特色，招生政策，分数线。。。 |  
+    # 安徽省的合肥工业大学怎么样
+    # 我考了 xxx 分 / 排名 xxx，我能去哪所大学/读什么专业， ==> 
+    # 我来自 xxx，我考了 xxx 分/排名，我想去 xxx大学
+    # xxx地区 有 大学

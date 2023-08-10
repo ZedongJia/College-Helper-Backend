@@ -1,5 +1,5 @@
 r'''
-## ! 这里只有有两个函数
+## ! 这里只有两个函数
 
 ```
 def chatChoice
@@ -30,18 +30,19 @@ API_KEY = "sk-c1a770bbdf82424ea1e61ec68e1aae64"
 
 
 def chatChoice(user_input):
-    return "请求已注释，使用需打开"
-    # response = Generation.call(model="qwen-v1", prompt=user_input, api_key=API_KEY, enable_search=True)
-    # # The response status_code is HTTPStatus.OK indicate success,
-    # # otherwise indicate request is failed, you can get error code
-    # # and message from code and message.
-    # if response.status_code == HTTPStatus.OK:
-    #     result_text = response.output["text"]  # The output text
-    #     return result_text
-    # else:
-    #     print(response.code)  # The error code.
-    #     print(response.message)  # The error message.
-    #     return "对不起，出了点小问题，请您重试"
+    # return "请求已注释，使用需打开"
+    response = Generation.call(model="qwen-v1", prompt=user_input, api_key=API_KEY, enable_search=True)
+    print(user_input)
+    # The response status_code is HTTPStatus.OK indicate success,
+    # otherwise indicate request is failed, you can get error code
+    # and message from code and message.
+    if response.status_code == HTTPStatus.OK:
+        result_text = response.output["text"]  # The output text
+        return result_text
+    else:
+        print(response.code)  # The error code.
+        print(response.message)  # The error message.
+        return "对不起，出了点小问题，请您重试"
 
 
 
@@ -78,18 +79,18 @@ def AIResponse(relation_list: list, identity: str = "志愿填报老师", target
             prefix_target,
         ]
     )
-    return "请求已注释，使用需打开"
-    # response = Generation.call(model="qwen-v1", prompt=text, api_key=API_KEY)
-    # # The response status_code is HTTPStatus.OK indicate success,
-    # # otherwise indicate request is failed, you can get error code
-    # # and message from code and message.
-    # if response.status_code == HTTPStatus.OK:
-    #     result_text = response.output["text"]  # The output text
-    #     return result_text
-    # else:
-    #     print(response.code)  # The error code.
-    #     print(response.message)  # The error message.
-    #     return "对不起，出了点小问题，请您重试"
+    # return "请求已注释，使用需打开"
+    response = Generation.call(model="qwen-v1", prompt=text, api_key=API_KEY)
+    # The response status_code is HTTPStatus.OK indicate success,
+    # otherwise indicate request is failed, you can get error code
+    # and message from code and message.
+    if response.status_code == HTTPStatus.OK:
+        result_text = response.output["text"]  # The output text
+        return result_text
+    else:
+        print(response.code)  # The error code.
+        print(response.message)  # The error message.
+        return "对不起，出了点小问题，请您重试"
 
 
 if __name__ == "__main__":

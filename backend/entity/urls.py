@@ -12,5 +12,6 @@ urlpatterns = [
          views.getCateDegreeInfo,
          name="getCateDegreeInfo"),
     path("getScoreInfo/", views.getScoreInfo, name="getScoreInfo"),
-    path("scoreRecommend/", views.ScoreRecommend, name="ScoreRecommend")
+    path("scoreRecommend/", views.ScoreRecommend, name="ScoreRecommend"),
+    path("AIChat/", views.AIChat, name="AiChat")
 ]
