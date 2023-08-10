@@ -254,7 +254,6 @@ def RelationQuery(request):
     entity1 = request.GET.get("entity1", None)
     option = request.GET.get("option", None)
     entity2 = request.GET.get("entity2", None)
-    print(option)
     data = []
     link = []
     # 至少一个实体
@@ -498,7 +497,6 @@ def recommendation(request):
         print(e)
     finally:
         pass
-    print(len(recommdList))
     return JsonResponse({"recommdList": recommdList[:n]})
 
 
