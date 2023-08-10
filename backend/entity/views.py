@@ -11,10 +11,10 @@ import models.chatgpt as chatgpt
 import re
 import entity.ai as ai
 from models.recommendation import Recommendation
+from django.db import connection
 
 def index(request):
     return HttpResponse("hello")
-
 
 def typeColar(type):
     if type == 'university':
@@ -548,85 +548,107 @@ def AIChat(request):
     score = re.search(r'([\d]{1,3})分', sentence)
     rank = re.search(r'([\d]{1,6})[位名位]', sentence)
     province = re.search(r'([^\s]{1,2})省', sentence)
+    if province == None:
+        province = re.search(r'([^\s]{1,2})市', sentence)
+        if province is None:
+            if (sentence.find('内蒙古') != -1):
+                province = '内蒙古'
+            elif (sentence.find('黑龙江') != -1):
+                province = '黑龙江'
+            else:
+                province = None
+        else:
+            province = province.group(1)
     relationList = []
     data = []
     link = []
     content = ''
     # 有分数/排名，所在地(想去的大学)
     # 我考了 xxx 分 / 排名 xxx，我能去哪所大学/读什么专业，  我来自 xxx，我考了 xxx 分/排名，我想去 xxx大学
-    if (score != None or rank != None) and province != None:
-        num = 0
-        province = province.group(1)
-        if len(uni_) != 0:
-            relationList.append('考生向往的大学是' + uni_ + '，考生来自' + province + '省。')
-        if score != None:
-            score = score.group(1)
-            relationList.append('高考分数' + score + ' 分。')
-            detail_dict = neo4j.ScoreRecommend(province, score)
+    try:
+        if (score != None or rank != None) and province is None:
+            relationList.append('考生未提供具体的省份信息，请委婉的告诉他。所提供的的信息中至少包括 高考分数/排名，所在地区等。')
+        elif (score != None or rank != None) and province is not None:
+            num = 0
+            if len(uni_) != 0:
+                relationList.append('考生向往的大学是' + uni_ + '，考生来自' + province + '省。')
+            detail_dict = {}
+            if score != None:
+                score = score.group(1)
+                relationList.append('高考分数' + score + ' 分。')
+                detail_dict = neo4j.ScoreRecommend(province, score)
+            else:
+                relationList.append('考生今年高考的排名是 ' + rank + ' 名。')
+                rank = rank.group(1)
+                detail_dict = neo4j.RankRecommend(province, rank)
+            name = []
             for item_dict in detail_dict:
-                relationList.append('学校名称：' + item_dict['name'] + '专业名称：' + item_dict['m.name'])
+                relationList.append('学校名称：' + item_dict['name'] + '，专业名称：' + item_dict['m.name'])
+                if item_dict['name'] not in name:
+                    data.append({ 'name': item_dict['name'], 'symbolSize': 60, 'c': 1, 'type': entity_type })
+                    name.append(item_dict['name'])
+                if item_dict['m.name'] not in name:
+                    data.append({ 'name': item_dict['m.name'], 'symbolSize': 60, 'c': 1, 'type': entity_type })
+                    name.append(item_dict['m.name'])
+                if item_dict['name'] in name and item_dict['m.name'] in name:
+                    link.append({'source': item_dict['name'], 'label': 'HAS', 'target': item_dict['m.name']})
                 num += 1
                 if num >= 10:
                     break
+            relationList.append('请你根据考生的所在地以及向往的大学以及以上可能感兴趣的专业，并参考当前国内各专业的热度情况、薪资情况等因素，为该学生提供合理的专业选择建议。如果成绩不太理想的话，你要适度安慰该考生。')
+        # 没有分数，有省有学校   ===>    安徽省的合肥工业大学怎么样 
+        elif province != None and len(uni_) != 0:
+            province = province.group(1)
+            data, link = neo4j.twoEntityQuery(province, uni_, 10)
+            relationList.append('考生向往的大学是' + uni_ )
+            data, link = neo4j.twoEntityQuery(province, uni_, 1)
+        # 未输入 分数/排名/大学 信息  ==>  不查可以去的 大学/专业  ==>  xxx省有什么大学 | xxx大学有什么特色，招生政策。。。 |  
+        elif (province != None and len(uni_) == 0) or (province == None and len(uni_) != 0):
+            name = province.group(1) if province != None else uni_
+            relationList.append('考生的问题是：' + sentence + '。我将给你部分信息，请你在此基础上完善补充总结。')
+            if sentence.find('人') > -1:
+                u_ = 'person'
+                data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'BELONG_TO')
+            elif sentence.find("特色") > -1:
+                u_ = 'special'
+                data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'RELATED_TO')
+            elif sentence.find("分数线") > -1 or sentence.find("招生政策") > -1:
+                u_ = 'total_line'
+                data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'SET')
+            elif sentence.find("食宿环境") > -1 or sentence.find("住宿环境") > -1:
+                u_ = 'living_condition'
+                data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'BELONG_TO')
+            elif sentence.find("哪些大学") > -1 or sentence.find("什么大学") > -1:
+                data, link, relationList = ai.onlyOneEnity({ 'name': name, 'label': 'province' })
+            elif sentence.find("哪些专业") > -1 or sentence.find("什么专业") > -1:
+                u_ = 'major'
+                data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'HAS')
+            elif len(nameAndLabel) == 1:
+                data, link, relationList = ai.onlyOneEnity(nameAndLabel[0])
+            elif len(nameAndLabel) == 2:
+                data, link = neo4j.twoEntityQuery(nameAndLabel[0]['name'], nameAndLabel[1]['name'], 1)
+            # 关系太多，直接调用接口
+            else:
+                content = chatgpt.AIResponse(sentence)
+            t = 0
+            if len(data) != 0 and len(relationList) == 1:
+                for item_dict in data:
+                    if item_dict['name'] == None:
+                        item_dict['name'] = item_dict['type']
+                    relationList.append('名称：' + item_dict['name'])
+                    t += 1
+                    if t >= 10:
+                        break
+        # 不含有任何实体或省份等，直接调用接口
         else:
-            relationList.append('考生今年高考的排名是 ' + rank + ' 名。')
-            rank = rank.group(1)
-            detail_dict = neo4j.RankRecommend(province, rank)
-            for item_dict in detail_dict:
-                relationList.append('专业名称：' + item_dict['m.name'])
-                num += 1
-                if num >= 10:
-                    break
-        relationList.append('请你根据考生的所在地以及向往的大学以及以上可能感兴趣的专业，并参考当前国内各专业的热度情况、薪资情况等因素，为该学生提供合理的专业选择建议。如果成绩不太理想的话，你要适度安慰该考生。')
-    # 没有分数，有省有学校   ===>    安徽省的合肥工业大学怎么样 
-    elif province != None and len(uni_) != 0:
-        province = province.group(1)
-        data, link = neo4j.twoEntityQuery(province, uni_, 10)
-        relationList.append('考生向往的大学是' + uni_ )
-    # 未输入 分数/排名/大学 信息  ==>  不查可以去的 大学/专业  ==>  xxx省有什么大学 | xxx大学有什么特色，招生政策。。。 |  
-    elif (province != None and len(uni_) == 0) or (province == None and len(uni_) != 0):
-        name = province.group(1) if province != None else uni_
-        relationList.append('考生的问题是：' + sentence + '。我将给你部分信息，请你在此基础上完善补充总结。')
-        if sentence.find('人') > -1:
-            u_ = 'person'
-            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'BELONG_TO')
-        elif sentence.find("特色") > -1:
-            u_ = 'special'
-            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'RELATED_TO')
-        elif sentence.find("分数线") > -1 or sentence.find("招生政策") > -1:
-            u_ = 'total_line'
-            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'SET')
-        elif sentence.find("食宿环境") > -1 or sentence.find("住宿环境") > -1:
-            u_ = 'living_condition'
-            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'BELONG_TO')
-        elif sentence.find("哪些大学") > -1 or sentence.find("什么大学") > -1:
-            data, link, relationList = ai.onlyOneEnity({ 'name': name, 'label': 'province' })
-        elif sentence.find("哪些专业") > -1 or sentence.find("什么专业") > -1:
-            u_ = 'major'
-            data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'HAS')
-        elif len(nameAndLabel) == 1:
-            data, link, relationList = ai.onlyOneEnity(nameAndLabel[0])
-        elif len(nameAndLabel) == 2:
-            data, link = neo4j.twoEntityQuery(nameAndLabel[0]['name'], nameAndLabel[1]['name'], 1)
-        # 关系太多，直接调用接口
-        else:
-            content = chatgpt.AIResponse(sentence)
-        t = 0
-        if len(data) != 0 and len(relationList) == 1:
-            for item_dict in data:
-                if item_dict['name'] == None:
-                    item_dict['name'] = item_dict['type']
-                relationList.append('名称：' + item_dict['name'])
-                t += 1
-                if t >= 10:
-                    break
-    # 不含有任何实体或省份等，直接调用接口
-    else:
-        content = chatgpt.chatChoice(sentence)
+            content = chatgpt.chatChoice(sentence)
 
-    if content == '':
-        relationList.append('这是问题: ' + sentence + '请你以上述信息为基础回答：')
-        content = chatgpt.AIResponse(relationList)
+        if content == '':
+            relationList.append('这是问题: ' + sentence + '请你以上述信息为基础回答。')
+            content = chatgpt.AIResponse(relationList)
+    except:
+        content = chatgpt.AIResponse(sentence)
+
     d_ = { 'data': data, 'link': link, 'content': content }
-    # d_ = { 'data': data, 'link': link, 'content': 'hello' }
+    print(d_)
     return JsonResponse(d_, safe=False)

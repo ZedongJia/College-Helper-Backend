@@ -1,12 +1,12 @@
 import numpy as np
 from models.recognize import Recognize
-from AK_Graph_Backend.settings import FASTEXT_MODEL
+# from AK_Graph_Backend.settings import FASTEXT_MODEL
 from django.db import connection
-import fasttext
-import fasttext.util
+# import fasttext
+# import fasttext.util
 
 #加载fasttext
-ft = fasttext.load_model(FASTEXT_MODEL)
+# ft = fasttext.load_model(FASTEXT_MODEL)
 
 class Recommendation:
     def __init__(self,first_n=1000,third_n=100):

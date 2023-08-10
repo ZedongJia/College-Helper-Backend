@@ -299,10 +299,6 @@ def RankRecommend(province, myRank):
 # 一个实体  一个标签类型  关系
 def aiTwoEntityQuery(entity_name, entity_type, num, label):
     type1 = entityType(entity_name)
-    print(type1)
-    print(entity_type)
-    print(entity_name)
-    print(label)
     if type1 == None:
         return [], []
     # 查询
@@ -323,8 +319,11 @@ def aiTwoEntityQuery(entity_name, entity_type, num, label):
     data = []
     link = []
     data.append({ 'name': entity_name, 'symbolSize': 60, 'c': 1, 'type': type1 })
+    print(res)
     if len(res) != 0:
         for major_dict in res:
+            if major_dict[m.name] == None:
+                major_dict['m.name'] = entity_type
             data.append({ 'name': major_dict['m.name'], 'symbolSize': 60, 'c': 1, 'type': entity_type })
             link.append({'source': entity_name, 'label': label, 'target': major_dict['m.name']})
     NEO4j_POOL.free(conn)
