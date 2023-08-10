@@ -143,6 +143,8 @@ def queryEntity(request):
                 % label,
                 params={"name": name},
             )
+            if len(cursor.data()) == 0:
+                return JsonResponse({"status": False, "error": "查无该专业"})
             data = cursor.data()[0]
             cursor = conn.run(
                 cypher="match (a:%s)-[:BELONG_TO]->(s:sub_branch)-[:BELONG_TO]->(m:main_branch)<-[:HAS]-(b:university) where a.name contains($name) and a.fk_university_id=b.id return a, b.name, s.name, m.name limit 300"
@@ -443,7 +445,6 @@ def recommendation(request):
             numEntity = 0
             fill = False
             while not fill:
-                print(numEntity)
                 uni_id = random.choice(temp)
                 cypher = """
                 match (n:university) where n.id = %d return n.name
@@ -453,10 +454,13 @@ def recommendation(request):
                 uni = conn.run(cypher).data()
                 if len(uni) != 0:
                     res = uni[0]["n.name"]
+                    if Recognize.mapper.get(res, None) is None:
+                        temp.remove(uni_id)
+                        continue
                     numEntity += 1
+                    first.append(res)
                     if numEntity > number:
                         break
-                    first.append(res)
                     cypher = """
                     match (a:university)-[:HAS]->(:main_branch)<-[:BELONG_TO]-(:sub_branch)<-[:BELONG_TO]-(m:major) where a.name="%s" and a.id = m.fk_university_id return m.name limit 3
                     """ % (
@@ -465,6 +469,8 @@ def recommendation(request):
                     ma = conn.run(cypher).data()
                     for _m in ma:
                         res = _m["m.name"]
+                        if Recognize.mapper.get(res, None) is None:
+                            continue
                         numEntity += 1
                         first.append(res)
                         if numEntity > number:
@@ -475,16 +481,15 @@ def recommendation(request):
                 else:
                     temp.remove(uni_id)
             # 生成字典
-            print(first)
-            print(len(first))
             first = neo4j.RandomHot(first)
+            print(first)
             for h in first:
                 res = neo4j.content(h, conn)
                 # 化成字典
                 temp = {}
                 temp["title"] = h
                 temp["content"] = res
-                temp["link"] = Recognize.recognize(h)["cut_dict"][0]["label"]
+                temp["link"] = Recognize.mapper[h]
                 # 添加到数组
                 l += 1
                 list.append(temp)
