@@ -386,56 +386,56 @@ def recommendation(request):
                     list=[]
                     l=0
         else:
-        for i in recommend.recommendation(int(request.session.get('id')),num=num):
-            cut=Recognize.recognize(i[1])['cut_dict'][0]['label']
-            if cut=='university'or cut=='major':
-                first.append(i[1])
-        #随机从数据中挑选
-        #随机挑选的实体数量
-        number=n-len(first)
-        print(number)
-        temp = [i for i in range(1000)]
-        # 连接
-        #随机大学
-        numEntity=0
-        while( numEntity!=number):
-            cypher = ("""
-            match (n:university) where n.id = %d return n.name
-            """ % (random.choice(temp)))
-            uni=conn.run(cypher).data()
-            if len(uni)!=0:
-                res = uni[0]['n.name']
-                if len(Recognize.recognize(res)['cut_dict'])!=0:
-                    numEntity+=1
-                    first.append(res)
-                    cypher = ("""
-                    match (n:university)-[:HAS]->(:main_branch)<-[:BELONG_TO]-(:sub_branch)<-[:BELONG_TO]-(m:major) where n.name = "%s" return m.name limit 2
-                    """ % (res))
-                    ma=conn.run(cypher).data()
-                    if len(ma) != 0:
-                        res=ma[0]['m.name']
-                        if len(Recognize.recognize(res)['cut_dict']) != 0:
-                            numEntity += 1
-                            first.append(res)
-        #生成字典
-        print(first)
-        print(len(first))
-        first=neo4j.RandomHot(first)
-        for h in first:
-            res = neo4j.content(h,conn)
-            #化成字典
-            temp={}
-            temp['title']=h
-            temp['content']=res
-            temp['link']=Recognize.recognize(h)['cut_dict'][0]['label']
-            #添加到数组
-            l+=1
-            list.append(temp)
-            #为3个时添加到最终数组，并重置
-            if l==3:
-                recommdList.append(list)
-                list=[]
-                l=0
+            for i in recommend.recommendation(int(request.session.get('id')),num=num):
+                cut=Recognize.recognize(i[1])['cut_dict'][0]['label']
+                if cut=='university'or cut=='major':
+                    first.append(i[1])
+            #随机从数据中挑选
+            #随机挑选的实体数量
+            number=n-len(first)
+            print(number)
+            temp = [i for i in range(1000)]
+            # 连接
+            #随机大学
+            numEntity=0
+            while( numEntity!=number):
+                cypher = ("""
+                match (n:university) where n.id = %d return n.name
+                """ % (random.choice(temp)))
+                uni=conn.run(cypher).data()
+                if len(uni)!=0:
+                    res = uni[0]['n.name']
+                    if len(Recognize.recognize(res)['cut_dict'])!=0:
+                        numEntity+=1
+                        first.append(res)
+                        cypher = ("""
+                        match (n:university)-[:HAS]->(:main_branch)<-[:BELONG_TO]-(:sub_branch)<-[:BELONG_TO]-(m:major) where n.name = "%s" return m.name limit 2
+                        """ % (res))
+                        ma=conn.run(cypher).data()
+                        if len(ma) != 0:
+                            res=ma[0]['m.name']
+                            if len(Recognize.recognize(res)['cut_dict']) != 0:
+                                numEntity += 1
+                                first.append(res)
+            #生成字典
+            print(first)
+            print(len(first))
+            first=neo4j.RandomHot(first)
+            for h in first:
+                res = neo4j.content(h,conn)
+                #化成字典
+                temp={}
+                temp['title']=h
+                temp['content']=res
+                temp['link']=Recognize.recognize(h)['cut_dict'][0]['label']
+                #添加到数组
+                l+=1
+                list.append(temp)
+                #为3个时添加到最终数组，并重置
+                if l==3:
+                    recommdList.append(list)
+                    list=[]
+                    l=0
     finally:
         NEO4j_POOL.free(conn)
     print(len(recommdList))
