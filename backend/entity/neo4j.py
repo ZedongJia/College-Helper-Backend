@@ -3,10 +3,6 @@ import json
 from models.recognize import Recognize
 import random
 
-# 获取所有省、市、大学、祖专业、父专业、专业的四个列表
-#     # 政策、person、major、university、省份、城市
-
-
 def get_list(path):
     with open(path, 'r', encoding='utf-8-sig') as f:
         info_json = f.read()
@@ -24,7 +20,6 @@ with open('entity/data/province_idx.txt', 'r', encoding='utf8') as f:
     info = f.readlines()
 for p_ in info:
     province_id_dict[p_.strip().split(',')[1]] = p_.strip().split(',')[0]
-
 
 def entityType(temp):
     if temp in province_list:
@@ -82,7 +77,6 @@ def universitySpecial(university):
         link.append({'source': university, 'label': 'HAS', 'target': major_dict['m.name']})
     NEO4j_POOL.free(conn)
     return data, link
-
 
 # 只有实体之一，无关系:
 def onlyOneEntityQuery(entity, num):
@@ -185,7 +179,6 @@ def yearsInfo(province_name):
     # dict_keys(['n.year'])
     return list(set([k['n.year'] for k in res])), province_list
 
-
 def cateDegreeInfo(province_name, year):
     # 查询
     cypher_ = ("""
@@ -198,7 +191,6 @@ def cateDegreeInfo(province_name, year):
 
     return list(set([r['n.category']
                      for r in res])), list(set([k['n.degree'] for k in res]))
-
 
 def scoreInfo(province_name, year, category, degree):
     # 查询
@@ -304,7 +296,6 @@ def RankRecommend(province, myRank):
 
     return res
 
-
 # 一个实体  一个标签类型  关系
 def aiTwoEntityQuery(entity_name, entity_type, num, label):
     type1 = entityType(entity_name)
@@ -339,16 +330,6 @@ def aiTwoEntityQuery(entity_name, entity_type, num, label):
     NEO4j_POOL.free(conn)
     return data, link
 
-# def getProAndUni(province, uni):
-#     data, link = twoEntityQuery(province, uni, 10)
-#     # 查询
-#     cypher_ = ("""
-#         match (m:university) where m.name = "%s" return m.intro;
-#     """ % (uni))
-#     conn = NEO4j_POOL.getConnect()
-#     res = conn.run(cypher_).data()[0]['m.intro']
-#     NEO4j_POOL.free(conn)
-#     return data, link
 #随即打乱数组
 def RandomHot(hot):
     length=len(hot)
