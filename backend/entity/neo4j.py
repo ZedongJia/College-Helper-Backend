@@ -335,7 +335,7 @@ def universitySpecial(university):
 
 
 # match (p:province) - [:REFER] -> (n:major_line) <- [:SET] - (m:major) where p.name = '安徽' and  n.year = '2022' and n.lowScore > '650' return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore limit 5;
-def ScoreRecommend(province, myScore, branch):
+def ScoreRecommend(province, myScore, branch="理科"):
     # 获取区间
     minScore = int(myScore) - 50
     if minScore < 0:
@@ -369,7 +369,7 @@ def ScoreRecommend(province, myScore, branch):
 
     return res
 
-def RankRecommend(province, myRank, branch):
+def RankRecommend(province, myRank, branch='理科'):
     province_id = province_id_dict[province]
     # 查询
     cypher_ = ("""
