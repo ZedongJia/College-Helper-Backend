@@ -437,7 +437,6 @@ def AIChat(request):
     # 我考了 xxx 分 / 排名 xxx，我能去哪所大学/读什么专业，  我来自 xxx，我考了 xxx 分/排名，我想去 xxx大学
     if (score != None or rank != None) and province != None:
         num = 0
-        print('---------------------------------')
         province = province.group(1)
         if len(uni_) != 0:
             relationList.append('考生向往的大学是' + uni_ + '，考生来自' + province + '省。')
@@ -484,7 +483,6 @@ def AIChat(request):
         elif sentence.find("哪些大学") > -1 or sentence.find("什么大学") > -1:
             data, link, relationList = ai.onlyOneEnity({ 'name': name, 'label': 'province' })
         elif sentence.find("哪些专业") > -1 or sentence.find("什么专业") > -1:
-            print('--------------------')
             u_ = 'major'
             data, link = neo4j.aiTwoEntityQuery(name, u_ , 10, 'HAS')
         elif len(nameAndLabel) == 1:
@@ -513,21 +511,3 @@ def AIChat(request):
     d_ = { 'data': data, 'link': link, 'content': content }
     # d_ = { 'data': data, 'link': link, 'content': 'hello' }
     return JsonResponse(d_, safe=False)
-
-    #     
-    #     # xxx学校 有 专业/食宿环境
-    #     # xxx学校 对 xxx城市/省份 有 招生政策
-    #     # xxx学校 xxx专业 最低分数线
-    #     # university - [:HAS] - [:major]
-    #     # 我是天津人，我想去安徽
-    #     #     1            7
-    #     #     7            1
-    #     # ’是‘，’来自‘，
-    #     # ’去’，‘到’，‘考’
-    #     return HttpResponse(200)
-
-    # xxx省有什么大学 | xxx大学有什么特色，招生政策，分数线。。。 |  
-    # 安徽省的合肥工业大学怎么样
-    # 我考了 xxx 分 / 排名 xxx，我能去哪所大学/读什么专业， ==> 
-    # 我来自 xxx，我考了 xxx 分/排名，我想去 xxx大学
-    # xxx地区 有 大学

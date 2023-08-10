@@ -7,6 +7,7 @@ urlpatterns = [
     path("query", views.queryEntity, name="entityQuery"),
     path("cut", views.cut_sentence, name='cut_sentence'),
     path("intelligentQuery", views.IntelligentQuery, name="intelligentQuery"),
+    path("recommendation",views.recommendation,name="recommendation"),
     path("getProYearsInfo/", views.getProYearsInfo, name="getProYearsInfo"),
     path("getCateDegreeInfo/",
          views.getCateDegreeInfo,
