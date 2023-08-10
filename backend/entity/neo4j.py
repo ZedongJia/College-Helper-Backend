@@ -2,6 +2,7 @@ from neo4j_model.db_pool import NEO4j_POOL
 import json
 from py2neo import Relationship
 from models.recognize import Recognize
+import random
 
 # 获取所有省、市、大学、祖专业、父专业、专业的四个列表
 #     # 政策、person、major、university、省份、城市
@@ -170,7 +171,7 @@ def scoreInfo(province_name, year, category, degree):
     for key in sorted(data_detail, reverse=True):
         keys.append(list(data_detail[key].keys())[0])
         score.append(list(data_detail[key].values())[0])
-    
+
     return score, keys
 
 # match (p:province) - [:REFER] -> (n:major_line) <- [:SET] - (m:major) where p.name = '安徽' and  n.year = '2022' and n.lowScore > '650' return m.name, m.ruanKeScore, m.fk_university_id, n.lowScore limit 5;
@@ -186,7 +187,7 @@ def ScoreRecommend(province, myScore):
     """ % (int(province_id), int(myScore), minScore))
     conn = NEO4j_POOL.getConnect()
     res = conn.run(cypher_).data()
-    # 处理数据 返回 m.name, m.ruanKeScore, m.fk_university_id, n.lowScore 
+    # 处理数据 返回 m.name, m.ruanKeScore, m.fk_university_id, n.lowScore
     universitys_id_name = {}
     for item_dict in res:
         item_dict["m.ruanKeScore"] = '暂无数据' if item_dict["m.ruanKeScore"] == '' else item_dict["m.ruanKeScore"]
@@ -202,4 +203,37 @@ def ScoreRecommend(province, myScore):
     # 按照 res 中的 lowScore降序排列
     res.sort(key = lambda t: t['n.lowScore'], reverse=True)
 
+    return res
+
+#随即打乱数组
+def RandomHot(hot):
+    length=len(hot)
+    temp = [i for i in range(length)]
+    random.shuffle(temp)
+    arr=[]
+    for i in temp:
+        arr.append(hot[i])
+    return arr
+
+#对数据库中大学专业进行识别并返回
+def content(h,conn):
+    # 连接
+    res='暂无详情'
+    if len(Recognize.recognize(h)['cut_dict'])==0:
+        res='暂无详情'
+    else:
+        if Recognize.recognize(h)['cut_dict'][0]['label']=='university':
+            cypher = ("""
+            match (n:university) where n.name = "%s" return n.intro
+            """ % (h))
+            res = conn.run(cypher).data()[0]['n.intro']
+        elif Recognize.recognize(h)['cut_dict'][0]['label']=='major':
+            cypher = ("""
+            match (n:major) where n.name = "%s" return n.detail limit 1
+            """ % (h))
+            res = conn.run(cypher).data()[0]['n.detail']
+        if res[0] == '[':
+            res = json.loads(res)
+            res = ''.join(res)
+        res = res.replace('\n','').replace('\t','').replace('<p>','').replace('<a>','').replace('\r','').replace('</p>', '').replace('</a>', '').replace('<strong>','').replace('</strong>','').replace('</br>','')
     return res

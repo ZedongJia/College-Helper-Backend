@@ -8,7 +8,7 @@ import fasttext.util
 ft = fasttext.load_model('C:/Users/eStar.LAPTOP-T8EJFERU/Desktop/fasttext/wiki.zh/wiki.zh.bin')
 
 class Recommendation:
-    def __init__(self,first_n=1000,third_n=100,num=100):
+    def __init__(self,first_n=1000,third_n=100):
         #当前用户ID
         self.userId=0
         #第一次过滤人数
@@ -16,7 +16,7 @@ class Recommendation:
         #最终过滤人数
         self.third_n=third_n
         #最终返回实体数量
-        self.num=num
+        self.num=0
         #所有用户信息
         self.User={}
         '''
@@ -170,8 +170,9 @@ class Recommendation:
         thirdUser=thirdUser[:self.third_n]
         return thirdUser
 
-    def recommendation(self,userId):
+    def recommendation(self,userId,num):
         self.userId=userId
+        self.num=num
         #获取所用用户浏览记录
         self.getAllUser()
         #进行推荐
