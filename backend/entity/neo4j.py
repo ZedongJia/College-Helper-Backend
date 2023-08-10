@@ -360,5 +360,5 @@ def content(h,conn):
         if res[0] == '[':
             res = json.loads(res)
             res = ''.join(res)
-        res = res.replace('\n','').replace('\t','').replace('<p>','').replace('<a>','').replace('\r','').replace('</p>', '').replace('</a>', '').replace('<strong>','').replace('</strong>','').replace('</br>','')
+        res = res.replace('\n','').replace('\t','').replace('<p>','').replace('<a>','').replace('\r','').replace('</p>', '').replace('</a>', '').replace('<strong>','').replace('</strong>','').replace('<br />','')
     return res
