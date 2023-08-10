@@ -10,6 +10,7 @@ from models.recognize import Recognize
 import models.chatgpt as chatgpt
 import re
 import entity.ai as ai
+from models.recommendation import Recommendation
 
 def index(request):
     return HttpResponse("hello")
@@ -334,6 +335,124 @@ def IntelligentQuery(request):
         return JsonResponse({"error": "输入错误请重试"})
    
     return JsonResponse(json.dumps(MultiEntityQuery(entity)), safe=False)
+
+#智能推荐接口
+recommend = Recommendation()
+@require_http_methods(["GET"])
+def recommendation(request):
+    status = request.GET.get("status", None)
+    if status=='origin':
+        #总返回数量
+        n=54
+        #推荐得到数量
+        num=42
+    elif status=='refresh':
+        n=18
+        num=12
+    #查询数据库中数据
+    with connection.cursor()as cursor:
+        sql1 = "select *from browsing_history"
+        cursor.execute(sql1)
+        all = cursor.fetchall()
+        sql2="select count(*) from user"
+        cursor.execute(sql2)
+        #用户数量
+        UserNum = cursor.fetchall()[0][0]
+    #空值热门专业推荐
+    hot=[]
+    #实体推荐列表
+    first=[]
+    #最终返回的推荐数组
+    recommdList=[]
+    #数组中的数组
+    list=[]
+    #计数标识
+    l=0
+    try:
+        conn = NEO4j_POOL.getConnect()
+        if len(all)==0 or UserNum==1:
+            # if True:
+            hot = [
+                '北京大学', '四川大学', '郑州大学', '云南大学', '厦门大学', '武汉大学', '中山大学', '清华大学',
+                '哈尔滨工业大学', '中南大学', '南京大学', '西南大学', '复旦大学', '华南师范大学', '北京师范大学',
+                '中国人民大学', '山东大学', '苏州大学', '汉语言文学', '软件工程', '数据科学与大数据技术', '人工智能',
+                '计算机科学与技术', '心理学', '商务经济学', '金融学', '阿拉伯语', '哲学', '临床医学', '英语', '法学', '土木工程','口腔医学','电气工程与智能控制'
+                ,'航空航天工程','会计学'
+            ]
+            # hot = ['北京大学', '心理学']
+            hot=neo4j.RandomHot(hot)
+            # 连接
+            for h in hot:
+                res = neo4j.content(h,conn)
+                #化成字典
+                temp={}
+                temp['title']=h
+                temp['content']=res
+                temp['link']='#'
+                #添加到数组
+                l+=1
+                list.append(temp)
+                #为3个时添加到最终数组，并重置
+                if l==3:
+                    recommdList.append(list)
+                    list=[]
+                    l=0
+        else:
+            for i in recommend.recommendation(int(request.session.get('id')),num=num):
+                cut=Recognize.recognize(i[1])['cut_dict'][0]['label']
+                if cut=='university'or cut=='major':
+                    first.append(i[1])
+            #随机从数据中挑选
+            #随机挑选的实体数量
+            number=n-len(first)
+            print(number)
+            temp = [i for i in range(1000)]
+            # 连接
+            #随机大学
+            numEntity=0
+            while( numEntity!=number):
+                cypher = ("""
+                match (n:university) where n.id = %d return n.name
+                """ % (random.choice(temp)))
+                uni=conn.run(cypher).data()
+                if len(uni)!=0:
+                    res = uni[0]['n.name']
+                    if len(Recognize.recognize(res)['cut_dict'])!=0:
+                        numEntity+=1
+                        first.append(res)
+                        cypher = ("""
+                        match (n:university)-[:HAS]->(:main_branch)<-[:BELONG_TO]-(:sub_branch)<-[:BELONG_TO]-(m:major) where n.name = "%s" return m.name limit 2
+                        """ % (res))
+                        ma=conn.run(cypher).data()
+                        if len(ma) != 0:
+                            res=ma[0]['m.name']
+                            if len(Recognize.recognize(res)['cut_dict']) != 0:
+                                numEntity += 1
+                                first.append(res)
+            #生成字典
+            print(first)
+            print(len(first))
+            first=neo4j.RandomHot(first)
+            for h in first:
+                res = neo4j.content(h,conn)
+                #化成字典
+                temp={}
+                temp['title']=h
+                temp['content']=res
+                temp['link']=Recognize.recognize(h)['cut_dict'][0]['label']
+                #添加到数组
+                l+=1
+                list.append(temp)
+                #为3个时添加到最终数组，并重置
+                if l==3:
+                    recommdList.append(list)
+                    list=[]
+                    l=0
+    finally:
+        NEO4j_POOL.free(conn)
+    print(len(recommdList))
+    return JsonResponse({'recommdList': recommdList[:n]})
+
 
 # 获取某一省的全部信息
 # 必选参数：province_name
