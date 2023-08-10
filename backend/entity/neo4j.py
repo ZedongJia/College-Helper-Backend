@@ -217,7 +217,6 @@ def scoreInfo(province_name, year, category, degree):
     return score, keys
 # 大学 -> 专业
 def universitySpecial(university):
-    print(university)
     conn = NEO4j_POOL.getConnect()
     num = 10
     # 根据大学名称获取id
@@ -319,7 +318,6 @@ def aiTwoEntityQuery(entity_name, entity_type, num, label):
     data = []
     link = []
     data.append({ 'name': entity_name, 'symbolSize': 60, 'c': 1, 'type': type1 })
-    print(res)
     if len(res) != 0:
         for major_dict in res:
             if major_dict['m.name'] == None:

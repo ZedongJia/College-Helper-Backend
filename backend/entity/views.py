@@ -257,7 +257,6 @@ def RelationQuery(request):
     entity1 = request.GET.get("entity1", None)
     option = request.GET.get("option", None)
     entity2 = request.GET.get("entity2", None)
-    print(option)
     data = []
     link = []
     # 至少一个实体
@@ -405,7 +404,6 @@ def recommendation(request):
             #随机从数据中挑选
             #随机挑选的实体数量
             number=n-len(first)
-            print(number)
             temp = [i for i in range(1000)]
             # 连接
             #随机大学
@@ -430,8 +428,6 @@ def recommendation(request):
                                 numEntity += 1
                                 first.append(res)
             #生成字典
-            print(first)
-            print(len(first))
             first=neo4j.RandomHot(first)
             for h in first:
                 res = neo4j.content(h,conn)
@@ -450,7 +446,6 @@ def recommendation(request):
                     l=0
     finally:
         NEO4j_POOL.free(conn)
-    print(len(recommdList))
     return JsonResponse({'recommdList': recommdList[:n]})
 
 
@@ -649,5 +644,4 @@ def AIChat(request):
             l1.append(l_)
 
     d_ = { 'data': t1, 'link': l1, 'content': content }
-    print(d_)
     return JsonResponse(d_, safe=False)
