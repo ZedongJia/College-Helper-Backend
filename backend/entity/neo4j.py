@@ -501,7 +501,7 @@ def content(h, conn):
                    .replace('br /', '')
                    .replace('/ br', ''))
             res = re.sub(r'<\/?(p|a|strong)[^\/>]*>', '', res, flags=re.S)
-            res = re.sub(r'< {0,}\/?(a|p|img|strong)[^>]*>','',res,flags=re.S)
+            res = re.sub(r'< {0,}\/?(a|p|img|strong|span|b|i|br|div|li|ul|ol)[^>]*>','',res,flags=re.S)
         else:
             res = '暂无详情'
     return res

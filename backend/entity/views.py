@@ -143,9 +143,10 @@ def queryEntity(request):
                 % label,
                 params={"name": name},
             )
-            if len(cursor.data()) == 0:
+            result = cursor.data()
+            if len(result) == 0:
                 return JsonResponse({"status": False, "error": "查无该专业"})
-            data = cursor.data()[0]
+            data = result[0]
             cursor = conn.run(
                 cypher="match (a:%s)-[:BELONG_TO]->(s:sub_branch)-[:BELONG_TO]->(m:main_branch)<-[:HAS]-(b:university) where a.name contains($name) and a.fk_university_id=b.id return a, b.name, s.name, m.name limit 300"
                 % label,
