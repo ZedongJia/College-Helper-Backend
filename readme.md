@@ -29,7 +29,11 @@ cd backend
 ```
 cd 数据爬取
 ```
+3. 数据库
+```
+cd 数据库
+```
 ### ！注意
-请认真阅览readme.md文件
+请认真阅览所有的readme.md文件
 
-所有事物均在readme里解决
+所有事物均会在readme里得到解决
