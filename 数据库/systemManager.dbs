@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="system_manager" id="Project-45b" database="MySql" >
+	<schema name="system_manager" >
+		<table name="browsing_history" prior="Tbl" >
+			<column name="id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="user_id" prior="user_ID" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="time" type="TIMESTAMP" jt="93" />
+			<column name="type" type="VARCHAR" length="20" jt="12" />
+			<column name="content" type="TEXT" jt="-1" />
+			<column name="isCollected" type="ENUM" jt="12" >
+				<defo><![CDATA['false']]></defo>
+				<enumeration><![CDATA['true','false']]></enumeration>
+			</column>
+			<column name="isHistory" type="ENUM" jt="12" >
+				<defo><![CDATA['true']]></defo>
+				<enumeration><![CDATA['true','false']]></enumeration>
+			</column>
+			<index name="pk_browsing_history" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_browsing_history_user" to_schema="system_manager" to_table="user" delete_action="cascade" update_action="cascade" >
+				<fk_column name="user_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="feedback" prior="Tbl" >
+			<column name="id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="user_id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="time" type="TIMESTAMP" jt="93" />
+			<column name="type" type="VARCHAR" length="20" jt="12" />
+			<column name="question" type="TEXT" jt="-1" />
+			<column name="advice" type="TEXT" jt="-1" />
+			<column name="image" type="BLOB" jt="2004" />
+			<column name="state" type="VARCHAR" length="20" jt="12" />
+			<index name="pk_feedback" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_feedback_user" to_schema="system_manager" to_table="user" >
+				<fk_column name="user_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="follow" prior="Tbl" >
+			<column name="user_id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="follow_id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<fk name="fk_follow_user" to_schema="system_manager" to_table="user" delete_action="cascade" update_action="cascade" >
+				<fk_column name="follow_id" pk="id" />
+			</fk>
+			<fk name="fk_user" to_schema="system_manager" to_table="user" delete_action="cascade" update_action="cascade" >
+				<fk_column name="user_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="gallery" prior="Tbl" >
+			<column name="user_id" prior="user_ID" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="image" type="MEDIUMBLOB" jt="-4" mandatory="y" />
+			<fk name="fk_gallery_user" to_schema="system_manager" to_table="user" delete_action="cascade" update_action="cascade" >
+				<fk_column name="user_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="message" prior="Tbl" >
+			<column name="session_id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="user_id" prior="user_ID" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="time" type="TIMESTAMP" jt="93" />
+			<column name="content" type="TEXT" jt="-1" />
+			<fk name="fk_message_user" to_schema="system_manager" to_table="user" delete_action="cascade" update_action="cascade" >
+				<fk_column name="user_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="privacy" prior="Tbl" >
+			<column name="user_id" prior="user_ID" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="telephone_priv" type="ENUM" jt="12" >
+				<defo><![CDATA['false']]></defo>
+				<enumeration><![CDATA['true','false']]></enumeration>
+			</column>
+			<column name="gender_priv" type="ENUM" jt="12" >
+				<defo><![CDATA['false']]></defo>
+				<enumeration><![CDATA['true','false']]></enumeration>
+			</column>
+			<column name="email_priv" type="ENUM" jt="12" >
+				<defo><![CDATA['false']]></defo>
+				<enumeration><![CDATA['true','false']]></enumeration>
+			</column>
+			<column name="QQ_priv" type="ENUM" jt="12" >
+				<defo><![CDATA['false']]></defo>
+				<enumeration><![CDATA['true','false']]></enumeration>
+			</column>
+			<column name="weChat_priv" type="ENUM" jt="12" >
+				<defo><![CDATA['false']]></defo>
+				<enumeration><![CDATA['true','false']]></enumeration>
+			</column>
+			<column name="collection_priv" type="ENUM" jt="12" >
+				<defo><![CDATA['false']]></defo>
+				<enumeration><![CDATA['true','false']]></enumeration>
+			</column>
+			<fk name="fk_privacy_user" to_schema="system_manager" to_table="user" delete_action="cascade" update_action="cascade" >
+				<fk_column name="user_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="review" prior="Tbl" >
+			<column name="id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="user_id" prior="user_ID" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="name" type="TEXT" jt="-1" />
+			<column name="label" prior="entityName" type="VARCHAR" length="100" jt="12" />
+			<column name="time" type="TIMESTAMP" jt="93" />
+			<column name="content" type="TEXT" jt="-1" />
+			<index name="pk_review" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_review_user" to_schema="system_manager" to_table="user" delete_action="cascade" update_action="cascade" >
+				<fk_column name="user_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="session" prior="Tbl" >
+			<column name="id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<column name="user_id" prior="user_ID" type="BIGINT" jt="-5" mandatory="y" unsigned="y" />
+			<fk name="fk_session_user" to_schema="system_manager" to_table="user" delete_action="cascade" update_action="cascade" >
+				<fk_column name="user_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="user" prior="Tbl" >
+			<column name="id" type="BIGINT" jt="-5" mandatory="y" unsigned="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="nickname" type="TEXT" jt="-1" />
+			<column name="password" type="TEXT" jt="-1" />
+			<column name="image" type="TEXT" jt="-1" />
+			<column name="phone" type="VARCHAR" length="50" jt="12" />
+			<column name="gender" type="ENUM" jt="12" >
+				<enumeration><![CDATA['male','female','unknown']]></enumeration>
+			</column>
+			<column name="email" type="VARCHAR" length="100" jt="12" />
+			<column name="QQ" type="VARCHAR" length="100" jt="12" />
+			<column name="weChat" type="VARCHAR" length="100" jt="12" />
+			<index name="pk_Tbl" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<trigger name="gen_user_privacy" id="Trigger-32f" isSystem="false" >
+			<string><![CDATA[delimiter $$
+CREATE DEFINER = CURRENT_USER TRIGGER `system_manager`.`user_AFTER_INSERT` AFTER INSERT ON `user` FOR EACH ROW
+BEGIN
+INSERT INTO privacy VALUES(NEW.id, 'true', 'true', 'true', 'true', 'true', 'true');
+END $$
+delimiter ;]]></string>
+		</trigger>
+	</schema>
+	<layout name="Default Layout" id="Layout-950" show_relation="columns" >
+		<entity schema="system_manager" name="browsing_history" color="C1D8EE" x="288" y="48" />
+		<entity schema="system_manager" name="feedback" color="C1D8EE" x="704" y="320" />
+		<entity schema="system_manager" name="follow" color="C1D8EE" x="464" y="288" />
+		<entity schema="system_manager" name="gallery" color="C1D8EE" x="80" y="480" />
+		<entity schema="system_manager" name="message" color="C1D8EE" x="512" y="512" />
+		<entity schema="system_manager" name="privacy" color="C1D8EE" x="48" y="240" />
+		<entity schema="system_manager" name="review" color="C1D8EE" x="576" y="144" />
+		<entity schema="system_manager" name="session" color="C1D8EE" x="272" y="592" />
+		<entity schema="system_manager" name="user" color="C1D8EE" x="288" y="272" />
+	</layout>
+</project>

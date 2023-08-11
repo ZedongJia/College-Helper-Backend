@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="college_helper" id="Project-c0f" database="MySql" >
+	<schema name="college_helper" >
+		<table name="city" prior="tbl" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="name" type="VARCHAR" length="100" jt="12" mandatory="y" />
+			<column name="fk_province_id" prior="province_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<index name="pk_city" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_city_province" to_schema="college_helper" to_table="province" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_province_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="fractional_line" prior="tbl" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_province_id" prior="province_id" type="INT" length="100" jt="4" mandatory="y" unsigned="y" />
+			<column name="year" type="VARCHAR" length="5" jt="12" />
+			<column name="category" prior="main_category" type="VARCHAR" length="20" jt="12" />
+			<column name="degree" type="VARCHAR" length="50" jt="12" />
+			<column name="detail" type="JSON" jt="2000" />
+			<index name="pk_fractional_line" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_province" to_schema="college_helper" to_table="province" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_province_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="living_condition" prior="tbl" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="fk_university_id" prior="university_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="domitory" type="TEXT" jt="-1" />
+			<column name="canteen" type="TEXT" jt="-1" />
+			<column name="imageUrls" prior="image_urls" type="TEXT" jt="-1" />
+			<index name="pk_living_condition" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_living_condition_university" to_schema="college_helper" to_table="university" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_university_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="main_branch" prior="mainBranch" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="name" type="VARCHAR" length="100" jt="12" />
+			<column name="tag" type="TINYTEXT" jt="-1" />
+			<column name="infoDict" type="JSON" jt="2000" />
+			<column name="intro" type="TEXT" jt="-1" />
+			<index name="pk_mainBranch" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="major" prior="tbl" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_university_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_sub_branch_id" prior="fk_branch_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="name" type="TEXT" jt="-1" />
+			<column name="degree" type="VARCHAR" length="20" jt="12" />
+			<column name="ruanKeScore" type="VARCHAR" length="50" jt="12" />
+			<column name="duration" type="VARCHAR" length="50" jt="12" />
+			<column name="careerInfo" prior="career_info" type="TEXT" jt="-1" />
+			<column name="detail" type="TEXT" jt="-1" />
+			<index name="pk_major" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_major_university" to_schema="college_helper" to_table="university" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_university_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="major_line" prior="Tbl" >
+			<column name="fk_major_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_province_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="year" type="VARCHAR" length="5" jt="12" />
+			<column name="branch" type="VARCHAR" length="50" jt="12" />
+			<column name="batch" type="VARCHAR" length="100" jt="12" />
+			<column name="lowScore" type="VARCHAR" length="100" jt="12" />
+			<column name="averageScore" type="VARCHAR" length="100" jt="12" />
+			<fk name="fk_major_line_province" to_schema="college_helper" to_table="province" >
+				<fk_column name="fk_province_id" pk="id" />
+			</fk>
+			<fk name="fk_major_line_major" to_schema="college_helper" to_table="major" >
+				<fk_column name="fk_major_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="person" prior="tbl" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="fk_university_id" prior="university_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="name" type="VARCHAR" length="100" jt="12" />
+			<column name="identity" type="VARCHAR" length="50" jt="12" />
+			<column name="tag" prior="digest" type="TINYTEXT" jt="-1" />
+			<column name="infoDict" prior="info_dict" type="JSON" jt="2000" />
+			<column name="intro" type="TEXT" jt="-1" />
+			<index name="pk_person" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_person_university" to_schema="college_helper" to_table="university" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_university_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="province" prior="privince" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="name" type="VARCHAR" length="100" jt="12" />
+			<index name="pk_province" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="rel_main_branch_university" prior="rel_main" >
+			<column name="fk_university_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_main_branch" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<fk name="fk_university" to_schema="college_helper" to_table="university" >
+				<fk_column name="fk_university_id" pk="id" />
+			</fk>
+			<fk name="fk_main_branch" to_schema="college_helper" to_table="main_branch" >
+				<fk_column name="fk_main_branch" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="rel_university_special" prior="rel_university_special_policy" >
+			<column name="fk_university_id" prior="university_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_special_id" prior="special_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<fk name="fk_rel_university" to_schema="college_helper" to_table="university" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_university_id" pk="id" />
+			</fk>
+			<fk name="fk_rel_special" to_schema="college_helper" to_table="special" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_special_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="special" prior="special_policy" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="name" prior="title" type="TEXT" jt="-1" />
+			<column name="tag" type="TINYTEXT" jt="-1" />
+			<column name="infoDict" type="JSON" jt="2000" />
+			<column name="intro" type="TEXT" jt="-1" />
+			<index name="pk_special_policy" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="sub_branch" prior="branch" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_mainBranch_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="name" type="TEXT" length="100" jt="-1" />
+			<column name="tag" type="TINYTEXT" jt="-1" />
+			<column name="infoDict" type="JSON" jt="2000" />
+			<column name="intro" type="TEXT" jt="-1" />
+			<index name="pk_branch" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_branch_main_branch" to_schema="college_helper" to_table="main_branch" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_mainBranch_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="total_line" prior="university_policy" >
+			<column name="fk_university_id" prior="university_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_province_id" prior="province_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="year" type="VARCHAR" length="5" jt="12" />
+			<column name="branch" type="VARCHAR" length="50" jt="12" >
+				<comment><![CDATA[文科、理科、综合、物理、历史]]></comment>
+			</column>
+			<column name="batch" type="VARCHAR" length="100" jt="12" >
+				<comment><![CDATA[本科一批、本科二批]]></comment>
+			</column>
+			<column name="controlScore" type="VARCHAR" length="100" jt="12" />
+			<column name="lowScore" type="VARCHAR" length="100" jt="12" />
+			<column name="enrollmentType" type="VARCHAR" length="50" jt="12" />
+			<fk name="fk_university_policy" to_schema="college_helper" to_table="university" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_university_id" pk="id" />
+			</fk>
+			<fk name="fk_province_policy" to_schema="college_helper" to_table="province" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_province_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="university" prior="tbl" >
+			<column name="id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="fk_city_id" prior="city_id" type="INT" jt="4" mandatory="y" unsigned="y" />
+			<column name="name" type="TEXT" jt="-1" mandatory="y" />
+			<column name="imageUrls" prior="image_urls" type="JSON" jt="2000" />
+			<column name="establishTime" prior="establish_time" type="VARCHAR" length="100" jt="12" />
+			<column name="detailLocation" prior="detail_location" type="TEXT" jt="-1" />
+			<column name="honorTags" prior="honor_tags" type="JSON" jt="2000" />
+			<column name="officialWebsite" prior="web" type="JSON" jt="2000" />
+			<column name="officialPhoneNumber" prior="phone" type="JSON" jt="2000" />
+			<column name="officialEmail" prior="mail" type="VARCHAR" length="100" jt="12" />
+			<column name="rankInfo" prior="rank_info" type="JSON" jt="2000" />
+			<column name="educationInfo" prior="top_info" type="JSON" jt="2000" />
+			<column name="intro" type="JSON" jt="2000" />
+			<index name="pk_university" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<fk name="fk_university_city" to_schema="college_helper" to_table="city" delete_action="cascade" update_action="cascade" >
+				<fk_column name="fk_city_id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+	</schema>
+	<layout name="Default Layout" id="Layout-1c3" show_relation="columns" >
+		<entity schema="college_helper" name="city" color="C1D8EE" x="832" y="320" />
+		<entity schema="college_helper" name="fractional_line" color="C1D8EE" x="1168" y="352" />
+		<entity schema="college_helper" name="living_condition" color="C1D8EE" x="448" y="224" />
+		<entity schema="college_helper" name="main_branch" color="C1D8EE" x="144" y="640" />
+		<entity schema="college_helper" name="major" color="C1D8EE" x="624" y="752" />
+		<entity schema="college_helper" name="major_line" color="C1D8EE" x="1056" y="752" />
+		<entity schema="college_helper" name="person" color="C1D8EE" x="288" y="320" />
+		<entity schema="college_helper" name="province" color="C1D8EE" x="1024" y="544" />
+		<entity schema="college_helper" name="rel_main_branch_university" color="C1D8EE" x="320" y="544" />
+		<entity schema="college_helper" name="rel_university_special" color="C1D8EE" x="656" y="192" />
+		<entity schema="college_helper" name="special" color="C1D8EE" x="928" y="144" />
+		<entity schema="college_helper" name="sub_branch" color="C1D8EE" x="304" y="784" />
+		<entity schema="college_helper" name="total_line" color="C1D8EE" x="800" y="560" />
+		<entity schema="college_helper" name="university" color="C1D8EE" x="592" y="400" />
+		<callout x="48" y="48" pointer="Round" >
+			<comment><![CDATA[This is a layout - a diagram with tools.
+- Right-click the layout to create new tables. 
+- Double-click table headers to edit. 
+- For a better understanding of the schema, create multiple layouts.
+- Save the design to the model file, and deploy from 'Schema / Create into the database'.]]></comment>
+		</callout>
+		<script name="collegehelper.sql" id="Editor-1df8" language="SQL" file="file:/C:/Users/J/Desktop/第四组实训提交物/01.源码及数据库文件/数据库文件/collegehelper.sql" />
+	</layout>
+</project>
