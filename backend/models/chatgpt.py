@@ -25,7 +25,7 @@ from http import HTTPStatus
 大学有什么
 754 - 政策
 """
-API_KEY = "sk-c1a770bbdf82424ea1e61ec68e1aae64"
+API_KEY = ""
 
 
 
