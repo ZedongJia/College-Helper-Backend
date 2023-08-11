@@ -1,0 +1,14 @@
+1031,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=2127010&lemmaTitle=广东金融学院
+935,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=240886&lemmaTitle=贵州大学
+622,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=371351&lemmaTitle=山东师范大学
+583,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=199343&lemmaTitle=首钢工学院
+575,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=208094&lemmaTitle=北京联合大学
+417,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=210461&lemmaTitle=华中农业大学
+356,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=165540&lemmaTitle=云南财经大学
+303,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=1969958&lemmaTitle=广州体育学院
+230,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=176855&lemmaTitle=中国医科大学
+183,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=18627355&lemmaTitle=景德镇陶瓷大学
+179,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=599332&lemmaTitle=重庆师范大学
+169,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=584473&lemmaTitle=南京林业大学
+124,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=235286&lemmaTitle=哈尔滨工程大学
+97,https://baike.baidu.com/wikiui/api/getscoreline?lemmaId=162235&lemmaTitle=兰州大学
